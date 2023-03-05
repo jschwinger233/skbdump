@@ -13,3 +13,19 @@
 #ifndef MAX_DATA_SIZE
 #define MAX_DATA_SIZE (1024-4)
 #endif
+
+#ifndef ETH_P_IP
+#define ETH_P_IP 0x0800 /* Internet Protocol packet	*/
+#endif
+
+#ifndef ETH_P_IPV6
+#define ETH_P_IPV6 0x86DD /* IPv6 over bluebook		*/
+#endif
+
+#ifndef ETH_P_ARP
+#define ETH_P_ARP 0x0806 /* Address Resolution packet	*/
+#endif
+
+#ifndef ETH_P_8021Q
+#define ETH_P_8021Q 0x8100 /* 802.1Q VLAN Extended Header  */
+#endif
