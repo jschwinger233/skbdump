@@ -2,7 +2,7 @@
 #include "bpf_helpers.h"
 #include "endian.h"
 
-#define MAX_LAYER 6
+#define MAX_LAYER 0
 
 static __always_inline
 bool check_eth(struct ethhdr *eth)

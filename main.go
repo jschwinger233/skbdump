@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -93,12 +94,16 @@ func main() {
 			time.Sleep(time.Microsecond)
 
 		}
-		fmt.Printf(".")
+		jb, err := json.Marshal(meta)
+		if err != nil {
+			log.Fatalf("failed to marshal json: %+v\n", err)
+		}
+		fmt.Printf("%s\n", string(jb))
 		captureInfo := gopacket.CaptureInfo{
 			Timestamp:      bootTime.Add(time.Duration(meta.TimeNs)),
 			CaptureLength:  int(data.Len),
 			Length:         int(data.Len),
-			InterfaceIndex: getConfig().Ifindex,
+			InterfaceIndex: int(meta.Ifindex),
 		}
 		if err := pcapw.WritePacket(captureInfo, data.Data[:data.Len]); err != nil {
 			log.Fatalf("pcap.WritePacket(): %v", err)

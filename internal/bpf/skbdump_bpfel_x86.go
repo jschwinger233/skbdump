@@ -19,13 +19,23 @@ type SkbdumpSkbData struct {
 }
 
 type SkbdumpSkbMeta struct {
-	IsIngress bool
-	H_source  [14]uint8
-	H_dest    [14]uint8
-	_         [3]byte
-	Saddr     uint32
-	Daddr     uint32
-	TimeNs    uint64
+	IsIngress      bool
+	_              [7]byte
+	TimeNs         uint64
+	Len            uint32
+	PktType        uint32
+	Mark           uint32
+	QueueMapping   uint32
+	Protocol       uint32
+	VlanPresent    uint32
+	VlanTci        uint32
+	VlanProto      uint32
+	Priority       uint32
+	IngressIfindex uint32
+	Ifindex        uint32
+	TcIndex        uint32
+	Cb             [5]uint32
+	_              [4]byte
 }
 
 // LoadSkbdump returns the embedded CollectionSpec for Skbdump.
