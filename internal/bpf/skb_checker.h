@@ -13,7 +13,7 @@ bool check_eth(struct ethhdr *eth)
 static __always_inline
 bool check_ipv4(struct iphdr *ip)
 {
-	return bpf_ntohl(ip->daddr) == 167837953; // 10.1.1.1
+	return true;
 }
 
 static __always_inline
@@ -65,5 +65,5 @@ bool check_next_layer(struct skb_checker *checker, __u32 *this_proto)
 		return true;
 	}
 
-	return false;
+	return true;
 }

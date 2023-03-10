@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
-	"strconv"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/cilium/ebpf"
@@ -15,10 +18,16 @@ import (
 	"github.com/jschwinger233/skbdump/internal/bpf"
 )
 
-func main() {
+func init() {
+	initConfig()
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatalf("Failed to remove rlimit memlock: %v", err)
 	}
+}
+
+func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	objs := bpf.SkbdumpObjects{}
 	if err := bpf.LoadSkbdumpObjects(&objs, &ebpf.CollectionOptions{
@@ -32,30 +41,25 @@ func main() {
 	}
 	defer objs.Close()
 
-	ifindex, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := replaceTcQdisc(ifindex); err != nil {
-		log.Printf("Failed to replace tc-qdisc for if@%d: %v", ifindex, err)
+	if err := replaceTcQdisc(getConfig().Ifindex); err != nil {
+		log.Printf("Failed to replace tc-qdisc for if@%d: %v", getConfig().Ifindex, err)
 		return
 	}
 
-	if err := addTcFilterIngress(ifindex, objs.OnIngress); err != nil {
-		log.Printf("Failed to add tc-filter ingress for if@%d: %v", ifindex, err)
+	if err := addTcFilterIngress(getConfig().Ifindex, objs.OnIngress); err != nil {
+		log.Printf("Failed to add tc-filter ingress for if@%d: %v", getConfig().Ifindex, err)
 		return
 	} else {
-		defer deleteTcFilterIngress(ifindex, objs.OnIngress)
+		defer deleteTcFilterIngress(getConfig().Ifindex, objs.OnIngress)
 	}
 
-	if err := addTcFilterEgress(ifindex, objs.OnEgress); err != nil {
-		log.Printf("Failed to add tc-filter egress for if@%d: %v", ifindex, err)
+	if err := addTcFilterEgress(getConfig().Ifindex, objs.OnEgress); err != nil {
+		log.Printf("Failed to add tc-filter egress for if@%d: %v", getConfig().Ifindex, err)
 	} else {
-		defer deleteTcFilterEgress(ifindex, objs.OnEgress)
+		defer deleteTcFilterEgress(getConfig().Ifindex, objs.OnEgress)
 	}
 
-	f, err := os.Create("/tmp/lo.pcap")
+	f, err := os.Create(getConfig().PcapFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,6 +75,11 @@ func main() {
 	bootTime := host.Info().BootTime
 
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		meta := bpf.SkbdumpSkbMeta{}
 		if err := objs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
 			time.Sleep(time.Millisecond)
@@ -81,14 +90,15 @@ func main() {
 			if err := objs.DataQueue.LookupAndDelete(nil, &data); err == nil {
 				break
 			}
-		}
-		println(meta.IsIngress, data.Len)
+			time.Sleep(time.Microsecond)
 
+		}
+		fmt.Printf(".")
 		captureInfo := gopacket.CaptureInfo{
 			Timestamp:      bootTime.Add(time.Duration(meta.TimeNs)),
 			CaptureLength:  int(data.Len),
 			Length:         int(data.Len),
-			InterfaceIndex: ifindex,
+			InterfaceIndex: getConfig().Ifindex,
 		}
 		if err := pcapw.WritePacket(captureInfo, data.Data[:data.Len]); err != nil {
 			log.Fatalf("pcap.WritePacket(): %v", err)

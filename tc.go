@@ -35,13 +35,11 @@ func prepareTcObjMsgIngress(ifindex int) tc.Msg {
 
 	protocol := htons(unix.ETH_P_ALL)
 
-	priority := uint32(1)
-
 	msg.Family = unix.AF_UNSPEC
 	msg.Ifindex = uint32(ifindex)
 	msg.Parent = core.BuildHandle(tc.HandleRoot, tc.HandleMinIngress)
 	msg.Handle = core.BuildHandle(tc.HandleRoot, 1)
-	msg.Info = priority<<16 | uint32(protocol)
+	msg.Info = getConfig().Priority<<16 | uint32(protocol)
 
 	return msg
 }
@@ -51,13 +49,11 @@ func prepareTcObjMsgEgress(ifindex int) tc.Msg {
 
 	protocol := htons(unix.ETH_P_ALL)
 
-	priority := uint32(1)
-
 	msg.Family = unix.AF_UNSPEC
 	msg.Ifindex = uint32(ifindex)
 	msg.Parent = core.BuildHandle(tc.HandleRoot, tc.HandleMinEgress)
 	msg.Handle = core.BuildHandle(tc.HandleRoot, 2)
-	msg.Info = priority<<16 | uint32(protocol)
+	msg.Info = getConfig().Priority<<16 | uint32(protocol)
 
 	return msg
 }
