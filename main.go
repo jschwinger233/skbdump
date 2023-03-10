@@ -72,7 +72,11 @@ func main() {
 	}
 	defer f.Close()
 	pcapw := pcapgo.NewWriter(f)
-	if err := pcapw.WriteFileHeader(1600, layers.LinkTypeEthernet); err != nil {
+	linktype := layers.LinkTypeEthernet
+	if devices[0].IsL3Device() {
+		linktype = layers.LinkTypeRaw
+	}
+	if err := pcapw.WriteFileHeader(1600, linktype); err != nil {
 		log.Fatalf("WriteFileHeader: %v", err)
 	}
 
@@ -95,6 +99,7 @@ func main() {
 			return
 		default:
 		}
+
 		meta := bpf.SkbdumpSkbMeta{}
 		if err := bpfObjs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
 			time.Sleep(time.Millisecond)
@@ -106,7 +111,6 @@ func main() {
 				break
 			}
 			time.Sleep(time.Microsecond)
-
 		}
 		jb, err := json.Marshal(meta)
 		if err != nil {

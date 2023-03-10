@@ -36,3 +36,8 @@ func FindDevices(iface string) (devices []Device, err error) {
 	}
 	return
 }
+
+func (d *Device) IsL3Device() bool {
+	lladdr := d.Link.Attrs().HardwareAddr
+	return lladdr == nil || len(lladdr) != 6
+}
