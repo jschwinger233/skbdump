@@ -7,16 +7,17 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
-	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/elastic/go-sysinfo"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
 	"github.com/jschwinger233/skbdump/internal/bpf"
+	"github.com/jschwinger233/skbdump/internal/dev"
 )
 
 func init() {
@@ -27,40 +28,45 @@ func init() {
 }
 
 func main() {
+	var err error
+	defer func() {
+		if err != nil {
+			log.Fatalf("%+v", err)
+		}
+	}()
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	objs := bpf.SkbdumpObjects{}
-	if err := bpf.LoadSkbdumpObjects(&objs, &ebpf.CollectionOptions{
-		Programs: ebpf.ProgramOptions{
-			LogSize:  ebpf.DefaultVerifierLogSize * 4,
-			LogLevel: 2,
-		},
-	}); err != nil {
-		log.Printf("load failed: %+w\n", err)
-		return
-	}
-	defer objs.Close()
-
-	if err := replaceTcQdisc(getConfig().Ifindex); err != nil {
-		log.Printf("Failed to replace tc-qdisc for if@%d: %v", getConfig().Ifindex, err)
+	bpfObjs, err := bpf.LoadBpfObjects()
+	if err != nil {
 		return
 	}
 
-	if err := addTcFilterIngress(getConfig().Ifindex, objs.OnIngress); err != nil {
-		log.Printf("Failed to add tc-filter ingress for if@%d: %v", getConfig().Ifindex, err)
+	devices, err := dev.FindDevices(config.Iface)
+	if err != nil {
 		return
-	} else {
-		defer deleteTcFilterIngress(getConfig().Ifindex, objs.OnIngress)
 	}
 
-	if err := addTcFilterEgress(getConfig().Ifindex, objs.OnEgress); err != nil {
-		log.Printf("Failed to add tc-filter egress for if@%d: %v", getConfig().Ifindex, err)
-	} else {
-		defer deleteTcFilterEgress(getConfig().Ifindex, objs.OnEgress)
+	for _, device := range devices {
+		if err = device.EnsureTcQdisc(); err != nil {
+			return
+		}
+
+		delIngress, err := device.AddIngressFilter(bpfObjs.OnIngress, config.Priority)
+		if err != nil {
+			return
+		}
+		defer delIngress()
+
+		delEgress, err := device.AddEgressFilter(bpfObjs.OnEgress, config.Priority)
+		if err != nil {
+			return
+		}
+		defer delEgress()
 	}
 
-	f, err := os.Create(getConfig().PcapFilename)
+	f, err := os.Create(config.PcapFilename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,6 +75,14 @@ func main() {
 	if err := pcapw.WriteFileHeader(1600, layers.LinkTypeEthernet); err != nil {
 		log.Fatalf("WriteFileHeader: %v", err)
 	}
+
+	skbFilename := strings.TrimSuffix(config.PcapFilename, ".pcap") + ".skb"
+	skbw, err := os.Create(skbFilename)
+	if err != nil {
+		log.Fatalf("failed to create skb filename: %+v", err)
+	}
+	defer skbw.Close()
+
 	host, err := sysinfo.Host()
 	if err != nil {
 		return
@@ -82,13 +96,13 @@ func main() {
 		default:
 		}
 		meta := bpf.SkbdumpSkbMeta{}
-		if err := objs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
+		if err := bpfObjs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
 			time.Sleep(time.Millisecond)
 			continue
 		}
 		data := bpf.SkbdumpSkbData{}
 		for {
-			if err := objs.DataQueue.LookupAndDelete(nil, &data); err == nil {
+			if err := bpfObjs.DataQueue.LookupAndDelete(nil, &data); err == nil {
 				break
 			}
 			time.Sleep(time.Microsecond)
@@ -104,6 +118,9 @@ func main() {
 			CaptureLength:  int(data.Len),
 			Length:         int(data.Len),
 			InterfaceIndex: int(meta.Ifindex),
+		}
+		if _, err := skbw.Write(append(jb, '\n')); err != nil {
+			log.Fatalf("failed to write skb file: %+v", err)
 		}
 		if err := pcapw.WritePacket(captureInfo, data.Data[:data.Len]); err != nil {
 			log.Fatalf("pcap.WritePacket(): %v", err)

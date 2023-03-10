@@ -7,7 +7,9 @@ require (
 	github.com/elastic/go-sysinfo v1.9.0
 	github.com/florianl/go-tc v0.4.2
 	github.com/google/gopacket v1.1.19
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
+	github.com/vishvananda/netlink v1.1.0
 	golang.org/x/sys v0.2.0
 )
 
@@ -18,8 +20,8 @@ require (
 	github.com/josharian/native v1.1.0 // indirect
 	github.com/mdlayher/netlink v1.6.0 // indirect
 	github.com/mdlayher/socket v0.1.1 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
+	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f // indirect
 	howett.net/plist v0.0.0-20181124034731-591f970eefbb // indirect
