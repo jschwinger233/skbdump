@@ -35,4 +35,4 @@ Please be aware that every capture will dump two files, one is `pcap` file which
 
 1. There are some bugs of transforming cbpf to ebpf, and now the tool will break for `skbdump -i lo arp`. To workaround the issue you can use the equivalent filter expression such as `skbdump -i lo ether proto arp`.
 3. Some complicated filter expression doesn't work as expected, such as `'tcp[((tcp[12:1] & 0xf0) >> 2):4] = 0x47455420'`.
-2. Currently the tool only supports capturing packets with maximum 1024 bytes.
+2. Currently the tool only supports capturing packets with maximum 1500 bytes.

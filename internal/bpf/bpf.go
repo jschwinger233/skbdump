@@ -1,6 +1,8 @@
 package bpf
 
 import (
+	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/cilium/ebpf"
@@ -33,7 +35,7 @@ func setFilter(spec *ebpf.CollectionSpec, exp string) (err error) {
 	}
 
 	ebpfFilter = append(ebpfFilter,
-		asm.Mov.Imm(asm.R0, 0).WithSymbol("result"), // TC_ACT_OK
+		asm.Mov.Imm(asm.R0, 0).WithSymbol("result"), // r0 = TC_ACT_OK
 		asm.JNE.Imm(asm.R4, 0, "continue"),          // if r4 != 0 (match): jump to continue
 		asm.Return().WithSymbol("return"),           // else return TC_ACT_OK
 		asm.Mov.Imm(asm.R0, 0).WithSymbol("continue"),
@@ -48,6 +50,19 @@ func setFilter(spec *ebpf.CollectionSpec, exp string) (err error) {
 	return
 }
 
+func initTailcallMap(objs *SkbdumpObjects) (err error) {
+	r := reflect.ValueOf(objs)
+	for i := 1; i <= 1500; i++ {
+		tailFunc := reflect.Indirect(r).FieldByName(fmt.Sprintf("TailSkbData%d", i)).Interface().(*ebpf.Program)
+		key := uint32(i)
+		value := int32(tailFunc.FD())
+		if err = errors.WithStack(objs.SkbDataCall.Put(&key, &value)); err != nil {
+			return
+		}
+	}
+	return
+}
+
 func LoadBpfObjects(filterExp string) (_ *SkbdumpObjects, err error) {
 	objs := &SkbdumpObjects{}
 	spec, err := LoadSkbdump()
@@ -59,5 +74,9 @@ func LoadBpfObjects(filterExp string) (_ *SkbdumpObjects, err error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return objs, errors.WithStack(spec.LoadAndAssign(objs, nil))
+	if err = errors.WithStack(spec.LoadAndAssign(objs, nil)); err != nil {
+		return
+	}
+
+	return objs, errors.WithStack(initTailcallMap(objs))
 }

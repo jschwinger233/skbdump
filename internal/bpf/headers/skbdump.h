@@ -11,7 +11,7 @@
 #endif
 
 #ifndef MAX_DATA_SIZE
-#define MAX_DATA_SIZE 1024
+#define MAX_DATA_SIZE 1500
 #endif
 
 #ifndef ETH_P_IP

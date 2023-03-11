@@ -94,10 +94,10 @@ func main() {
 	}
 	bootTime := host.Info().BootTime
 
+	println("start tracing")
 	for {
 		meta := bpf.SkbdumpSkbMeta{}
 		if err := bpfObjs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
-			time.Sleep(time.Millisecond)
 			select {
 			case <-ctx.Done():
 				return
