@@ -29,3 +29,7 @@
 #ifndef ETH_P_8021Q
 #define ETH_P_8021Q 0x8100 /* 802.1Q VLAN Extended Header  */
 #endif
+
+#ifndef __maybe_unused
+# define __maybe_unused		__attribute__((__unused__))
+#endif

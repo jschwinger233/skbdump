@@ -4,7 +4,6 @@
 #include "bpf_helpers.h"
 #include "skbdump.h"
 #include "skb_data.h"
-#include "skb_checker.h"
 
 
 char __license[] SEC("license") = "Dual MIT/GPL";
@@ -39,24 +38,21 @@ struct bpf_map_def SEC("maps") meta_queue = {
 	.max_entries = MAX_QUEUE_SIZE,
 };
 
+// pcap_filter returns true when requirements are met and will push event to
+// userspace
+static __always_inline
+bool pcap_filter(void *data, void* data_end)
+{
+	return data_end > data;
+}
+
 static __always_inline
 void handle_skb(struct __sk_buff *skb, bool ingress)
 {
 	bpf_skb_pull_data(skb, 0);
 
-	struct skb_checker checker;
-	__builtin_memset(&checker, 0, sizeof(checker));
-	checker.cursor = (void *)(long)skb->data;
-	checker.data_end = (void *)(long)skb->data_end;
-
-	__u32 this_proto = 0;
-	for (int layer=0; layer<MAX_LAYER; layer++) {
-		if (!check_next_layer(&checker, &this_proto))
-			return;
-
-		if (this_proto == (__u32)IPPROTO_MAX)
-			break;
-	}
+	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end))
+		return;
 
 	struct skb_meta meta = {};
 	__builtin_memset(&meta, 0, sizeof(meta));

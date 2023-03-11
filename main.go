@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/google/gopacket/pcapgo"
 	"github.com/jschwinger233/skbdump/internal/bpf"
 	"github.com/jschwinger233/skbdump/internal/dev"
+	"github.com/pkg/errors"
 )
 
 func init() {
@@ -38,7 +38,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	bpfObjs, err := bpf.LoadBpfObjects()
+	bpfObjs, err := bpf.LoadBpfObjects(config.PcapFilterExp)
 	if err != nil {
 		return
 	}
@@ -80,8 +80,7 @@ func main() {
 		log.Fatalf("WriteFileHeader: %v", err)
 	}
 
-	skbFilename := strings.TrimSuffix(config.PcapFilename, ".pcap") + ".skb"
-	skbw, err := os.Create(skbFilename)
+	skbw, err := os.Create(config.SkbFilename)
 	if err != nil {
 		log.Fatalf("failed to create skb filename: %+v", err)
 	}
@@ -94,27 +93,32 @@ func main() {
 	bootTime := host.Info().BootTime
 
 	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
 		meta := bpf.SkbdumpSkbMeta{}
 		if err := bpfObjs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
 			time.Sleep(time.Millisecond)
-			continue
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Millisecond):
+				continue
+			}
 		}
 		data := bpf.SkbdumpSkbData{}
 		for {
 			if err := bpfObjs.DataQueue.LookupAndDelete(nil, &data); err == nil {
 				break
 			}
-			time.Sleep(time.Microsecond)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Microsecond):
+				continue
+			}
 		}
-		jb, err := json.Marshal(meta)
-		if err != nil {
-			log.Fatalf("failed to marshal json: %+v\n", err)
+		jb, e := json.Marshal(meta)
+		if e != nil {
+			err = errors.WithStack(err)
+			return
 		}
 		fmt.Printf("%s\n", string(jb))
 		captureInfo := gopacket.CaptureInfo{
@@ -123,11 +127,13 @@ func main() {
 			Length:         int(data.Len),
 			InterfaceIndex: int(meta.Ifindex),
 		}
-		if _, err := skbw.Write(append(jb, '\n')); err != nil {
-			log.Fatalf("failed to write skb file: %+v", err)
+		if _, err = skbw.Write(append(jb, '\n')); err != nil {
+			err = errors.WithStack(err)
+			return
 		}
-		if err := pcapw.WritePacket(captureInfo, data.Data[:data.Len]); err != nil {
-			log.Fatalf("pcap.WritePacket(): %v", err)
+		if err = pcapw.WritePacket(captureInfo, data.Data[:data.Len]); err != nil {
+			err = errors.WithStack(err)
+			return
 		}
 	}
 }
