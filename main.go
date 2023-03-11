@@ -27,49 +27,45 @@ func init() {
 	}
 }
 
-func main() {
-	var err error
-	defer func() {
-		if err != nil {
-			log.Fatalf("%+v", err)
-		}
-	}()
+func exitWithErr(err error) {
+	log.Fatalf("%+v", err)
+}
 
+func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	bpfObjs, err := bpf.LoadBpfObjects(config.PcapFilterExp)
 	if err != nil {
-		return
+		exitWithErr(errors.WithStack(err))
 	}
 
 	devices, err := dev.FindDevices(config.Iface)
 	if err != nil {
-		return
+		exitWithErr(errors.WithStack(err))
 	}
 
 	for _, device := range devices {
 		if err = device.EnsureTcQdisc(); err != nil {
-			return
+			exitWithErr(errors.WithStack(err))
 		}
 
 		delIngress, err := device.AddIngressFilter(bpfObjs.OnIngress, config.Priority)
 		if err != nil {
-			return
+			exitWithErr(errors.WithStack(err))
 		}
 		defer delIngress()
 
 		delEgress, err := device.AddEgressFilter(bpfObjs.OnEgress, config.Priority)
 		if err != nil {
-			return
+			exitWithErr(errors.WithStack(err))
 		}
 		defer delEgress()
 	}
 
 	f, err := os.Create(config.PcapFilename)
 	if err != nil {
-		err = errors.WithStack(err)
-		return
+		exitWithErr(errors.WithStack(err))
 	}
 	defer f.Close()
 	pcapw := pcapgo.NewWriter(f)
@@ -78,19 +74,18 @@ func main() {
 		linktype = layers.LinkTypeRaw
 	}
 	if err = errors.WithStack(pcapw.WriteFileHeader(1600, linktype)); err != nil {
-		return
+		exitWithErr(errors.WithStack(err))
 	}
 
 	skbw, e := os.Create(config.SkbFilename)
 	if e != nil {
-		err = errors.WithStack(e)
-		return
+		exitWithErr(errors.WithStack(e))
 	}
 	defer skbw.Close()
 
 	host, err := sysinfo.Host()
 	if err != nil {
-		return
+		exitWithErr(errors.WithStack(err))
 	}
 	bootTime := host.Info().BootTime
 
@@ -130,12 +125,10 @@ func main() {
 			InterfaceIndex: int(meta.Ifindex),
 		}
 		if _, err = skbw.Write(append(jb, '\n')); err != nil {
-			err = errors.WithStack(err)
-			return
+			exitWithErr(errors.WithStack(err))
 		}
 		if err = pcapw.WritePacket(captureInfo, data.Data[:data.Len]); err != nil {
-			err = errors.WithStack(err)
-			return
+			exitWithErr(errors.WithStack(err))
 		}
 	}
 }
