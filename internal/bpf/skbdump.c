@@ -38,8 +38,6 @@ struct bpf_map_def SEC("maps") meta_queue = {
 	.max_entries = MAX_QUEUE_SIZE,
 };
 
-// pcap_filter returns true when requirements are met and will push event to
-// userspace
 static __always_inline
 bool pcap_filter(void *data, void* data_end)
 {

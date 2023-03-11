@@ -16,7 +16,6 @@ func setFilter(spec *ebpf.CollectionSpec, exp string) (err error) {
 	if len(strings.Trim(exp, " ")) == 0 {
 		return
 	}
-	println(exp)
 	cbpfFilter, err := filter.NewExpression(exp).Compile().Compile()
 	if err != nil {
 		return errors.WithStack(err)

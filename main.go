@@ -68,7 +68,8 @@ func main() {
 
 	f, err := os.Create(config.PcapFilename)
 	if err != nil {
-		log.Fatal(err)
+		err = errors.WithStack(err)
+		return
 	}
 	defer f.Close()
 	pcapw := pcapgo.NewWriter(f)
@@ -76,13 +77,14 @@ func main() {
 	if devices[0].IsL3Device() {
 		linktype = layers.LinkTypeRaw
 	}
-	if err := pcapw.WriteFileHeader(1600, linktype); err != nil {
-		log.Fatalf("WriteFileHeader: %v", err)
+	if err = errors.WithStack(pcapw.WriteFileHeader(1600, linktype)); err != nil {
+		return
 	}
 
-	skbw, err := os.Create(config.SkbFilename)
-	if err != nil {
-		log.Fatalf("failed to create skb filename: %+v", err)
+	skbw, e := os.Create(config.SkbFilename)
+	if e != nil {
+		err = errors.WithStack(e)
+		return
 	}
 	defer skbw.Close()
 
