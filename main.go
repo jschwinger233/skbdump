@@ -96,6 +96,12 @@ func main() {
 
 	println("start tracing")
 	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		meta := bpf.SkbdumpSkbMeta{}
 		if err := bpfObjs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
 			select {
