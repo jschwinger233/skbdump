@@ -8,7 +8,6 @@ import (
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/asm"
 	"github.com/cloudflare/cbpfc"
-	"github.com/packetcap/go-pcap/filter"
 	"github.com/pkg/errors"
 )
 
@@ -18,9 +17,9 @@ func setFilter(spec *ebpf.CollectionSpec, exp string) (err error) {
 	if len(strings.Trim(exp, " ")) == 0 {
 		return
 	}
-	cbpfFilter, err := filter.NewExpression(exp).Compile().Compile()
+	cbpfFilter, err := dumpPcapFilterBpf(exp)
 	if err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 	ebpfFilter, err := cbpfc.ToEBPF(cbpfFilter, cbpfc.EBPFOpts{
 		PacketStart: asm.R2, // skb->data
@@ -31,7 +30,7 @@ func setFilter(spec *ebpf.CollectionSpec, exp string) (err error) {
 		LabelPrefix: "filter",
 	})
 	if err != nil {
-		return errors.WithStack(err)
+		return
 	}
 
 	ebpfFilter = append(ebpfFilter,
@@ -71,12 +70,12 @@ func LoadBpfObjects(filterExp string) (_ *SkbdumpObjects, err error) {
 	}
 
 	if err = setFilter(spec, filterExp); err != nil {
-		return nil, errors.WithStack(err)
+		return
 	}
 
 	if err = errors.WithStack(spec.LoadAndAssign(objs, nil)); err != nil {
 		return
 	}
 
-	return objs, errors.WithStack(initTailcallMap(objs))
+	return objs, initTailcallMap(objs)
 }

@@ -74,7 +74,7 @@ func main() {
 	defer f.Close()
 	pcapw := pcapgo.NewWriter(f)
 	linktype := layers.LinkTypeEthernet
-	if devices[0].IsL3Device() {
+	if len(devices) == 1 && devices[0].IsL3Device() {
 		linktype = layers.LinkTypeRaw
 	}
 	if err = errors.WithStack(pcapw.WriteFileHeader(1600, linktype)); err != nil {
