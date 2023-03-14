@@ -1,8 +1,11 @@
 package main
 
 import (
+	"log"
 	"strings"
 
+	"github.com/jschwinger233/skbdump/internal/bpf"
+	"github.com/jschwinger233/skbdump/internal/bpf/queue"
 	flag "github.com/spf13/pflag"
 )
 
@@ -14,7 +17,10 @@ type Config struct {
 	PcapFilterExp string
 }
 
-var config Config
+var (
+	config     Config
+	bpfObjects bpf.BpfObjects
+)
 
 func initConfig() {
 	flag.StringVarP(&config.Iface, "interface", "i", "lo", "interface to capture")
@@ -23,4 +29,10 @@ func initConfig() {
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
 	flag.Parse()
 	config.PcapFilterExp = strings.Join(flag.Args(), " ")
+
+	objs, err := queue.New()
+	if err != nil {
+		log.Fatalf("%+v", err)
+	}
+	bpfObjects = objs
 }

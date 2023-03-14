@@ -1,6 +1,8 @@
 package dev
 
 import (
+	"net"
+
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netlink"
 )
@@ -39,5 +41,9 @@ func FindDevices(iface string) (devices []Device, err error) {
 
 func (d *Device) IsL3Device() bool {
 	lladdr := d.Link.Attrs().HardwareAddr
-	return lladdr == nil || len(lladdr) != 6
+	return (lladdr == nil || len(lladdr) != 6) && !d.IsLoopback()
+}
+
+func (d *Device) IsLoopback() bool {
+	return d.Link.Attrs().Flags&net.FlagLoopback != 0
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -42,19 +43,22 @@ func newBpfInstruction(inst string) (_ bpf.Instruction, err error) {
 	}.Disassemble(), nil
 }
 
-func dumpPcapFilterBpf(exp string) (insts []bpf.Instruction, err error) {
+func MustGenerateCbpf(exp string) (insts []bpf.Instruction) {
 	out, err := exec.Command("tcpdump", "-dd", exp).Output()
 	if err != nil {
-		return nil, errors.Wrapf(err, "invalid pcap filter expression: %s", exp)
+		log.Fatalf("invalid pcap filter expression `%s`: %+v", exp, err)
 	}
 
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
 		inst, err := newBpfInstruction(scanner.Text())
 		if err != nil {
-			return nil, err
+			log.Fatalf("failed to extract instruction: %+v", err)
 		}
 		insts = append(insts, inst)
 	}
-	return insts, errors.WithStack(scanner.Err())
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("failed to read tcpdump stdout by line: %+v", err)
+	}
+	return insts
 }

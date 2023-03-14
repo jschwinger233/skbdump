@@ -2,7 +2,7 @@
 //go:build 386 || amd64
 // +build 386 amd64
 
-package bpf
+package queue
 
 import (
 	"bytes"
@@ -14,8 +14,8 @@ import (
 )
 
 type SkbdumpSkbData struct {
-	Data [1500]uint8
-	Len  uint32
+	Content [1500]uint8
+	Len     uint32
 }
 
 type SkbdumpSkbMeta struct {

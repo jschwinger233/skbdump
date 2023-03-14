@@ -38,8 +38,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	bpfObjs, err := bpf.LoadBpfObjects(config.PcapFilterExp)
-	if err != nil {
+	if err = bpfObjects.Load(bpf.MustGenerateCbpf(config.PcapFilterExp)); err != nil {
 		return
 	}
 
@@ -53,13 +52,13 @@ func main() {
 			return
 		}
 
-		delIngress, err := device.AddIngressFilter(bpfObjs.OnIngress, config.Priority)
+		delIngress, err := device.AddIngressFilter(bpfObjects.IngressFilter(), config.Priority)
 		if err != nil {
 			return
 		}
 		defer delIngress()
 
-		delEgress, err := device.AddEgressFilter(bpfObjs.OnEgress, config.Priority)
+		delEgress, err := device.AddEgressFilter(bpfObjects.EgressFilter(), config.Priority)
 		if err != nil {
 			return
 		}
@@ -90,58 +89,37 @@ func main() {
 
 	host, err := sysinfo.Host()
 	if err != nil {
+		err = errors.WithStack(err)
 		return
 	}
 	bootTime := host.Info().BootTime
 
 	println("start tracing")
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		meta := bpf.SkbdumpSkbMeta{}
-		if err := bpfObjs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(time.Millisecond):
-				continue
-			}
-		}
-		data := bpf.SkbdumpSkbData{}
-		for {
-			if err := bpfObjs.DataQueue.LookupAndDelete(nil, &data); err == nil {
-				break
-			}
-			select {
-			case <-ctx.Done():
-				return
-			case <-time.After(time.Microsecond):
-				continue
-			}
-		}
-		jb, e := json.Marshal(meta)
+	skbChan, err := bpfObjects.PollSkb(ctx)
+	if err != nil {
+		return
+	}
+	for skb := range skbChan {
+		jb, e := json.Marshal(skb.Meta)
 		if e != nil {
 			err = errors.WithStack(err)
 			return
 		}
-		fmt.Printf("%s\n", string(jb))
 		captureInfo := gopacket.CaptureInfo{
-			Timestamp:      bootTime.Add(time.Duration(meta.TimeNs)),
-			CaptureLength:  int(data.Len),
-			Length:         int(data.Len),
-			InterfaceIndex: int(meta.Ifindex),
+			Timestamp:      bootTime.Add(time.Duration(skb.Meta.TimeNs)),
+			CaptureLength:  len(skb.Data),
+			Length:         len(skb.Data),
+			InterfaceIndex: int(skb.Meta.Ifindex),
 		}
+		fmt.Printf("%+v\n", captureInfo)
 		if _, err = skbw.Write(append(jb, '\n')); err != nil {
 			err = errors.WithStack(err)
 			return
 		}
-		if err = pcapw.WritePacket(captureInfo, data.Data[:data.Len]); err != nil {
+		if err = pcapw.WritePacket(captureInfo, skb.Data); err != nil {
 			err = errors.WithStack(err)
 			return
 		}
+
 	}
 }
