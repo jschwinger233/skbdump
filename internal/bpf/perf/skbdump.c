@@ -71,7 +71,7 @@ void handle_skb(struct __sk_buff *skb, bool ingress)
 	meta.cb[4] = skb->cb[4];
 
 	__u64 flags = BPF_F_CURRENT_CPU;
-	flags |= (__u64)(skb->len > MAX_DATA_SIZE ? MAX_DATA_SIZE : skb->len) << 32;
+	flags |= (__u64)(skb->len) << 32;
 	bpf_perf_event_output(skb, &perf_output, flags, &meta, sizeof(meta));
 	return;
 }

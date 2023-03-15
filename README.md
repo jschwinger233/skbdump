@@ -26,6 +26,7 @@ Please download the latest binary in the [releases](https://github.com/jschwinge
 Usage of skbdump:
   -i, --interface string       interface to capture (default "lo")
   -w, --pcap-filename string   output pcap filename (default "skbdump.pcap")
+      --perf-output            use bpf_perf_event_output to lift payload size limit
   -p, --priority uint32        filter priority (default 1)
   -s, --skb-filename string    output skb filename (default "skbdump.skb")
 ```
@@ -42,4 +43,4 @@ Please be aware that every capture will dump two files, one is `pcap` file which
 
 # Known Issues
 
-2. Currently the tool only supports capturing packets with maximum 1500 bytes.
+1. Currently the tool only supports capturing packets with maximum 1500 bytes in default mode.
