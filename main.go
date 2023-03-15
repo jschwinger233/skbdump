@@ -52,14 +52,16 @@ func main() {
 			return
 		}
 
-		delIngress, err := device.AddIngressFilter(bpfObjects.IngressFilter(), config.Priority)
-		if err != nil {
+		delIngress, e := device.AddIngressFilter(bpfObjects.IngressFilter(), config.Priority)
+		if e != nil {
+			err = e
 			return
 		}
 		defer delIngress()
 
-		delEgress, err := device.AddEgressFilter(bpfObjects.EgressFilter(), config.Priority)
-		if err != nil {
+		delEgress, e := device.AddEgressFilter(bpfObjects.EgressFilter(), config.Priority)
+		if e != nil {
+			err = e
 			return
 		}
 		defer delEgress()
