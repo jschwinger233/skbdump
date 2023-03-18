@@ -83,10 +83,10 @@ func (o *PerfBpfObjects) Load(cbpfFilter []bpf.Instruction) (err error) {
 }
 
 func (o *PerfBpfObjects) EgressFilter() *ebpf.Program {
-	return o.objs.OnIngress
+	return o.objs.OnEgress
 }
 func (o *PerfBpfObjects) IngressFilter() *ebpf.Program {
-	return o.objs.OnEgress
+	return o.objs.OnIngress
 }
 
 func (o *PerfBpfObjects) PollSkb(ctx context.Context) (_ <-chan internalbpf.Skb, err error) {

@@ -74,10 +74,10 @@ func (o *QueueBpfObjects) Load(cbpfFilter []bpf.Instruction) (err error) {
 }
 
 func (o *QueueBpfObjects) EgressFilter() *ebpf.Program {
-	return o.objs.OnIngress
+	return o.objs.OnEgress
 }
 func (o *QueueBpfObjects) IngressFilter() *ebpf.Program {
-	return o.objs.OnEgress
+	return o.objs.OnIngress
 }
 
 func (o *QueueBpfObjects) PollSkb(ctx context.Context) (_ <-chan internalbpf.Skb, err error) {
