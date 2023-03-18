@@ -5,8 +5,6 @@ before:
 builds:
   - id: skbdump
     binary: skbdump
-    env:
-      - CGO_ENABLED=0
     goos:
       - linux
     goarch:
@@ -32,4 +30,3 @@ changelog:
     exclude:
     - '^docs:'
     - '^test:'
-

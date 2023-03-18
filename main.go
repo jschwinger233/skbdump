@@ -38,7 +38,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err = bpfObjects.Load(bpf.MustGenerateCbpf(config.PcapFilterExp)); err != nil {
+	if err = bpfObjects.Load(bpf.MustPcapCompile(config.PcapFilterExp)); err != nil {
 		return
 	}
 
@@ -52,14 +52,14 @@ func main() {
 			return
 		}
 
-		delIngress, e := device.AddIngressFilter(bpfObjects.IngressFilter(), config.Priority)
+		delIngress, e := device.AddIngressFilter(bpfObjects.IngressFilter())
 		if e != nil {
 			err = e
 			return
 		}
 		defer delIngress()
 
-		delEgress, e := device.AddEgressFilter(bpfObjects.EgressFilter(), config.Priority)
+		delEgress, e := device.AddEgressFilter(bpfObjects.EgressFilter())
 		if e != nil {
 			err = e
 			return

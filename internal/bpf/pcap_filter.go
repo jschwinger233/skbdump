@@ -1,64 +1,54 @@
 package bpf
 
 import (
-	"bufio"
-	"bytes"
-	"fmt"
 	"log"
-	"os/exec"
-	"strconv"
-	"strings"
+	"unsafe"
 
-	"github.com/pkg/errors"
 	"golang.org/x/net/bpf"
 )
 
-func newBpfInstruction(inst string) (_ bpf.Instruction, err error) {
-	parts := strings.Split(inst, " ")
-	if len(parts) != 6 {
-		return nil, errors.New(fmt.Sprintf("invalid bpf inst string: `%s`", inst))
+/*
+#cgo linux LDFLAGS: -lpcap
+#include <stdlib.h>
+#include <pcap.h>
+*/
+import "C"
+
+type pcapBpfProgram C.struct_bpf_program
+
+const (
+	MaxBpfInstructions       = 4096
+	bpfInstructionBufferSize = 8 * MaxBpfInstructions
+	MAXIMUM_SNAPLEN          = 262144
+)
+
+func MustPcapCompile(expr string) (insts []bpf.Instruction) {
+	buf := (*C.char)(C.calloc(C.PCAP_ERRBUF_SIZE, 1))
+	defer C.free(unsafe.Pointer(buf))
+
+	cptr := C.pcap_open_live(C.CString("lo"), C.int(MAXIMUM_SNAPLEN), C.int(0), C.int(0), buf)
+	if cptr == nil {
+		log.Fatalf("failed to pcap_open_live: %+v\n", C.GoString(buf))
 	}
 
-	op, err := strconv.ParseUint(strings.TrimPrefix(strings.Trim(parts[1], ","), "0x"), 16, 64)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	jt, err := strconv.ParseUint(strings.Trim(parts[2], ","), 10, 64)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	jf, err := strconv.ParseUint(strings.Trim(parts[3], ","), 10, 64)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	k, err := strconv.ParseUint(strings.TrimPrefix(strings.Trim(parts[4], ","), "0x"), 16, 64)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return bpf.RawInstruction{
-		Op: uint16(op),
-		Jt: uint8(jt),
-		Jf: uint8(jf),
-		K:  uint32(k),
-	}.Disassemble(), nil
-}
+	var bpfProg pcapBpfProgram
 
-func MustGenerateCbpf(exp string) (insts []bpf.Instruction) {
-	out, err := exec.Command("tcpdump", "-dd", exp).Output()
-	if err != nil {
-		log.Fatalf("invalid pcap filter expression `%s`: %+v", exp, err)
-	}
+	cexpr := C.CString(expr)
+	defer C.free(unsafe.Pointer(cexpr))
 
-	scanner := bufio.NewScanner(bytes.NewReader(out))
-	for scanner.Scan() {
-		inst, err := newBpfInstruction(scanner.Text())
-		if err != nil {
-			log.Fatalf("failed to extract instruction: %+v", err)
-		}
-		insts = append(insts, inst)
+	if C.pcap_compile(cptr, (*C.struct_bpf_program)(&bpfProg), cexpr, 1, C.bpf_u_int32(0)) < 0 {
+		log.Fatalf("failed to pcap_compile: %+v", C.GoString(C.pcap_geterr(cptr)))
 	}
-	if err := scanner.Err(); err != nil {
-		log.Fatalf("failed to read tcpdump stdout by line: %+v", err)
+	defer C.pcap_freecode((*C.struct_bpf_program)(&bpfProg))
+
+	bpfInsn := (*[bpfInstructionBufferSize]C.struct_bpf_insn)(unsafe.Pointer(bpfProg.bf_insns))[0:bpfProg.bf_len:bpfProg.bf_len]
+	for _, v := range bpfInsn {
+		insts = append(insts, bpf.RawInstruction{
+			Op: uint16(v.code),
+			Jt: uint8(v.jt),
+			Jf: uint8(v.jf),
+			K:  uint32(v.k),
+		}.Disassemble())
 	}
-	return insts
+	return
 }
