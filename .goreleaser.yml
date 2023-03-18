@@ -1,6 +1,7 @@
 before:
   hooks:
     - go mod download
+    - sudo apt-get install libpcap-dev
 
 builds:
   - id: skbdump
