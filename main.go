@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -107,13 +106,13 @@ func main() {
 			err = errors.WithStack(err)
 			return
 		}
+		skbPrint(skb, linktype)
 		captureInfo := gopacket.CaptureInfo{
 			Timestamp:      bootTime.Add(time.Duration(skb.Meta.TimeNs)),
 			CaptureLength:  len(skb.Data),
 			Length:         len(skb.Data),
 			InterfaceIndex: int(skb.Meta.Ifindex),
 		}
-		fmt.Printf("%+v\n", captureInfo)
 		if _, err = skbw.Write(append(jb, '\n')); err != nil {
 			err = errors.WithStack(err)
 			return
