@@ -18,7 +18,11 @@ Please download the latest binary in the [releases](https://github.com/jschwinge
 
 ### Requirements
 
-`tcpdump(8)` is required to generate cbpf bytecode, please install it.
+[libpcap](https://www.tcpdump.org/) is required for Linux, for Ubuntu:
+
+```bash
+apt install libpcap-dev
+```
 
 # Usage
 
@@ -27,7 +31,6 @@ Usage of skbdump:
   -i, --interface string       interface to capture (default "lo")
   -w, --pcap-filename string   output pcap filename (default "skbdump.pcap")
       --perf-output            use bpf_perf_event_output to lift payload size limit
-  -p, --priority uint32        filter priority (default 1)
   -s, --skb-filename string    output skb filename (default "skbdump.skb")
 ```
 
@@ -43,4 +46,5 @@ Please be aware that every capture will dump two files, one is `pcap` file which
 
 # Known Issues
 
-1. Currently the tool only supports capturing packets with maximum 1500 bytes in default mode.
+1. Currently the tool only supports capturing packets with maximum 1500 bytes in default mode (bpf queue output mode).
+2. Using perf output mode can capture payload larger than 1500 bytes, but it's likely to mess up the event order and get some events lost.
