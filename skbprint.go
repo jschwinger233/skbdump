@@ -20,6 +20,7 @@ func init() {
 		"ARP":      stringifyARP,
 		"IPv4":     stringifyIPv4,
 		"IPv6":     stringifyIPv6,
+		"UDP":      stringifyUDP,
 		"TCP":      stringifyTCP,
 		"Payload":  stringifyPayload,
 	}
@@ -64,7 +65,7 @@ func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
 }
 
 func stringifyEthernet(data []byte) string {
-	return fmt.Sprintf("%x:%x:%x:%x:%x:%x > %x:%x:%x:%x:%x:%x",
+	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x > %02x:%02x:%02x:%02x:%02x:%02x",
 		data[6], data[7], data[8], data[9], data[10], data[11],
 		data[0], data[1], data[2], data[3], data[4], data[5],
 	)
@@ -95,7 +96,7 @@ func stringifyARP(data []byte) string {
 	case 1:
 		return fmt.Sprintf("who-has %s tell %s", targetIP, senderIP)
 	case 2:
-		return fmt.Sprintf("%s is-at %x:%x:%x:%x:%x:%x", senderIP, senderMac[0], senderMac[1], senderMac[2], senderMac[3], senderMac[4], senderMac[5])
+		return fmt.Sprintf("%s is-at %02x:%02x:%02x:%02x:%02x:%02x", senderIP, senderMac[0], senderMac[1], senderMac[2], senderMac[3], senderMac[4], senderMac[5])
 	default:
 		return ""
 	}
