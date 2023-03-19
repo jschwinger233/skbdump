@@ -21,6 +21,7 @@ type SkbdumpSkbData struct {
 type SkbdumpSkbMeta struct {
 	IsIngress      bool
 	_              [7]byte
+	Address        uint64
 	TimeNs         uint64
 	Len            uint32
 	PktType        uint32

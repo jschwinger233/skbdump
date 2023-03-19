@@ -8,26 +8,6 @@
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
-struct skb_meta {
-	bool	is_ingress;
-	__u64	time_ns;
-
-	/* fetch 13 fields from skb */
-	__u32	len;
-	__u32	pkt_type;
-	__u32	mark;
-	__u32	queue_mapping;
-	__u32	protocol;
-	__u32	vlan_present;
-	__u32	vlan_tci;
-	__u32	vlan_proto;
-	__u32	priority;
-	__u32	ingress_ifindex;
-	__u32	ifindex;
-	__u32	tc_index;
-	__u32	cb[5];
-};
-
 // force emitting struct into the ELF.
 const struct skb_meta *_ __attribute__((unused));
 
@@ -56,6 +36,7 @@ void handle_skb(struct __sk_buff *skb, bool ingress)
 	__builtin_memset(&meta, 0, sizeof(meta));
 	meta.is_ingress = ingress;
 	meta.time_ns = bpf_ktime_get_ns();
+	meta.address = (long)(void *)skb;
 	/* copy from skb */
 	meta.len = skb->len;
 	meta.pkt_type = skb->pkt_type;

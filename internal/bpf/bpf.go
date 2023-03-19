@@ -10,6 +10,7 @@ import (
 type Meta struct {
 	IsIngress bool
 	TimeNs    uint64
+	Address   uint64
 
 	Len            uint32
 	PktType        uint32

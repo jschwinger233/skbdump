@@ -42,7 +42,7 @@ func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
 			firstLayer = layers.LayerTypeARP
 		}
 	}
-	fmt.Printf("%s@%d ", direction, skb.Meta.Ifindex)
+	fmt.Printf("%s@%d %016x ", direction, skb.Meta.Ifindex, skb.Meta.Address)
 	packet := gopacket.NewPacket(skb.Data, firstLayer, gopacket.NoCopy)
 
 	layerNum := len(packet.Layers())

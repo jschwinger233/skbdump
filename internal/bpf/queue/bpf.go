@@ -116,6 +116,7 @@ func (o *QueueBpfObjects) PollSkb(ctx context.Context) (_ <-chan internalbpf.Skb
 				Meta: internalbpf.Meta{
 					IsIngress:      meta.IsIngress,
 					TimeNs:         meta.TimeNs,
+					Address:        meta.Address,
 					Len:            meta.Len,
 					PktType:        meta.PktType,
 					Mark:           meta.Mark,
