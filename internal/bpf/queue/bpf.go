@@ -14,6 +14,32 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -no-strip -target native -type skb_meta -type skb_data Skbdump ./skbdump.c -- -I../headers -I. -Wall
 
+const (
+	/* bpf bytecode
+				00000000000467a8 <on_ingress>:
+				; {
+					36085:	r6 = r1
+					36086:	r7 = 0
+				; 	bpf_skb_pull_data(skb, 0);
+					36087:	r2 = 0
+					36088:	call 39
+				; 	__u64 skb_addr = (__u64)(void *)skb;
+					36089:	*(u64 *)(r10 - 104) = r6
+					36090:	r2 = r10
+					36091:	r2 += -104
+				; 	if (bpf_map_lookup_elem(&skb_address, &skb_addr))
+					36092:	r1 = 0 ll
+					36094:	call 1
+	GotoIndex ->	36095:	if r0 != 0 goto +11 <LBB1501_3>
+				; 	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end))
+					36096:	r1 = *(u32 *)(r6 + 80)
+					36097:	r2 = *(u32 *)(r6 + 76)
+	FilterIndex ->	36098:	if r2 >= r1 goto +71 <LBB1501_6>
+	*/
+	FilterIndex = 12
+	GotoIndex   = 9
+)
+
 type QueueBpfObjects struct {
 	spec *ebpf.CollectionSpec
 	objs *SkbdumpObjects
@@ -53,13 +79,9 @@ func (o *QueueBpfObjects) setFilter(cbpfFilter []bpf.Instruction) (err error) {
 		asm.Return().WithSymbol("return"),           // else return TC_ACT_OK
 		asm.Mov.Imm(asm.R0, 0).WithSymbol("continue"),
 	)
-	ingressInsts := o.spec.Programs["on_ingress"].Instructions
-	ingressInsts = append(ingressInsts[:6], append(ebpfFilter, ingressInsts[7:]...)...)
-	o.spec.Programs["on_ingress"].Instructions = ingressInsts
 
-	egressInsts := o.spec.Programs["on_egress"].Instructions
-	egressInsts = append(egressInsts[:6], append(ebpfFilter, egressInsts[7:]...)...)
-	o.spec.Programs["on_egress"].Instructions = egressInsts
+	o.spec.Programs["on_ingress"].Instructions = internalbpf.InjectInstructions(o.spec.Programs["on_ingress"].Instructions, ebpfFilter, FilterIndex, FilterIndex+1, []int{GotoIndex})
+	o.spec.Programs["on_egress"].Instructions = internalbpf.InjectInstructions(o.spec.Programs["on_egress"].Instructions, ebpfFilter, FilterIndex, FilterIndex+1, []int{GotoIndex})
 	return
 }
 

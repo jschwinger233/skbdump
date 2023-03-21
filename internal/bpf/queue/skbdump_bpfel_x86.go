@@ -1591,6 +1591,7 @@ type SkbdumpMapSpecs struct {
 	BpfStack    *ebpf.MapSpec `ebpf:"bpf_stack"`
 	DataQueue   *ebpf.MapSpec `ebpf:"data_queue"`
 	MetaQueue   *ebpf.MapSpec `ebpf:"meta_queue"`
+	SkbAddress  *ebpf.MapSpec `ebpf:"skb_address"`
 	SkbDataCall *ebpf.MapSpec `ebpf:"skb_data_call"`
 }
 
@@ -1616,6 +1617,7 @@ type SkbdumpMaps struct {
 	BpfStack    *ebpf.Map `ebpf:"bpf_stack"`
 	DataQueue   *ebpf.Map `ebpf:"data_queue"`
 	MetaQueue   *ebpf.Map `ebpf:"meta_queue"`
+	SkbAddress  *ebpf.Map `ebpf:"skb_address"`
 	SkbDataCall *ebpf.Map `ebpf:"skb_data_call"`
 }
 
@@ -1624,6 +1626,7 @@ func (m *SkbdumpMaps) Close() error {
 		m.BpfStack,
 		m.DataQueue,
 		m.MetaQueue,
+		m.SkbAddress,
 		m.SkbDataCall,
 	)
 }
