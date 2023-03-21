@@ -39,7 +39,7 @@ void handle_skb(struct __sk_buff *skb, bool ingress)
 	bpf_skb_pull_data(skb, 0);
 
 	__u64 skb_addr = (__u64)(void *)skb;
-	if (bpf_map_lookup_elem(&skb_address, &skb_addr))
+	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_address, &skb_addr))
 		goto cont;
 
 	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end))

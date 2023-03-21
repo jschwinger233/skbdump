@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Iface         string
 	PerfOutput    bool
+	SkbTrack      bool
 	SkbFilename   string
 	PcapFilename  string
 	PcapFilterExp string
@@ -23,11 +24,12 @@ var (
 	bpfObjects bpf.BpfObjects
 )
 
-func initConfig() {
+func mustInitConfig() {
 	flag.StringVarP(&config.Iface, "interface", "i", "lo", "interface to capture")
 	flag.BoolVarP(&config.PerfOutput, "perf-output", "", false, "use bpf_perf_event_output to lift payload size limit")
 	flag.StringVarP(&config.SkbFilename, "skb-filename", "s", "skbdump.skb", "output skb filename")
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
+	flag.BoolVarP(&config.SkbTrack, "skb-track", "t", false, "track skb by address")
 	flag.Parse()
 	config.PcapFilterExp = strings.Join(flag.Args(), " ")
 

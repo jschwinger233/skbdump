@@ -72,8 +72,8 @@ func (o *PerfBpfObjects) setFilter(cbpfFilter []bpf.Instruction) (err error) {
 	return
 }
 
-func (o *PerfBpfObjects) Load(cbpfFilter []bpf.Instruction) (err error) {
-	if err = o.setFilter(cbpfFilter); err != nil {
+func (o *PerfBpfObjects) Load(opts internalbpf.LoadOptions) (err error) {
+	if err = o.setFilter(opts.Filter); err != nil {
 		return
 	}
 	if err = errors.WithStack(o.spec.LoadAndAssign(o.objs, nil)); err != nil {

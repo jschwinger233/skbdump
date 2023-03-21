@@ -20,7 +20,7 @@ import (
 )
 
 func init() {
-	initConfig()
+	mustInitConfig()
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatalf("Failed to remove rlimit memlock: %v", err)
 	}
@@ -37,7 +37,10 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err = bpfObjects.Load(bpf.MustPcapCompile(config.PcapFilterExp)); err != nil {
+	if err = bpfObjects.Load(bpf.LoadOptions{
+		Filter:    bpf.MustPcapCompile(config.PcapFilterExp),
+		BpfConfig: bpf.BpfConfig{SkbTrack: config.SkbTrack},
+	}); err != nil {
 		return
 	}
 

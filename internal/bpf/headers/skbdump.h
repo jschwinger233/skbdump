@@ -61,3 +61,12 @@ struct skb_meta {
 	__u32	cb[5];
 };
 #endif
+
+#ifndef SKBDUMP_CONFIG_DEFINED
+#define SKBDUMP_CONFIG_DEFINED
+struct skbdump_config {
+	bool skb_track;
+};
+
+static volatile const struct skbdump_config SKBDUMP_CONFIG = {};
+#endif

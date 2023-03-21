@@ -41,6 +41,10 @@ func mustFindUpDevice() string {
 }
 
 func MustPcapCompile(expr string) (insts []bpf.Instruction) {
+	if len(expr) == 0 {
+		return
+	}
+
 	buf := (*C.char)(C.calloc(C.PCAP_ERRBUF_SIZE, 1))
 	defer C.free(unsafe.Pointer(buf))
 
