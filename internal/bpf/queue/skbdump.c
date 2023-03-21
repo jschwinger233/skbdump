@@ -5,6 +5,7 @@
 #include "skbdump.h"
 #include "skb_data.h"
 
+const static bool TRUE = true;
 
 char __license[] SEC("license") = "Dual MIT/GPL";
 
@@ -18,6 +19,13 @@ struct bpf_map_def SEC("maps") meta_queue = {
 	.max_entries = MAX_QUEUE_SIZE,
 };
 
+struct bpf_map_def SEC("maps") skb_address = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(__u64),
+	.value_size = sizeof(bool),
+	.max_entries = MAX_TRACK_SIZE,
+};
+
 static __always_inline
 bool pcap_filter(void *data, void* data_end)
 {
@@ -27,12 +35,19 @@ bool pcap_filter(void *data, void* data_end)
 static __always_inline
 void handle_skb(struct __sk_buff *skb, bool ingress)
 {
+	struct skb_meta meta;
 	bpf_skb_pull_data(skb, 0);
+
+	__u64 skb_addr = (__u64)(void *)skb;
+	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_address, &skb_addr))
+		goto cont;
 
 	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end))
 		return;
 
-	struct skb_meta meta = {};
+	bpf_map_update_elem(&skb_address, &skb_addr, &TRUE, BPF_ANY);
+
+cont:
 	__builtin_memset(&meta, 0, sizeof(meta));
 	meta.is_ingress = ingress;
 	meta.time_ns = bpf_ktime_get_ns();

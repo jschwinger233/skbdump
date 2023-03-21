@@ -2,8 +2,11 @@ package bpf
 
 import (
 	"log"
+	"net"
 	"unsafe"
 
+	"github.com/pkg/errors"
+	"github.com/vishvananda/netlink"
 	"golang.org/x/net/bpf"
 )
 
@@ -22,11 +25,30 @@ const (
 	MAXIMUM_SNAPLEN          = 262144
 )
 
+func mustFindUpDevice() string {
+	links, err := netlink.LinkList()
+	if err != nil {
+		log.Fatalf("%+v", errors.WithStack(err))
+	}
+
+	for _, link := range links {
+		if link.Attrs().Flags&net.FlagUp != 0 {
+			return link.Attrs().Name
+		}
+	}
+	log.Fatal("cannot find an up device to call pcap_open_live")
+	return ""
+}
+
 func MustPcapCompile(expr string) (insts []bpf.Instruction) {
+	if len(expr) == 0 {
+		return
+	}
+
 	buf := (*C.char)(C.calloc(C.PCAP_ERRBUF_SIZE, 1))
 	defer C.free(unsafe.Pointer(buf))
 
-	cptr := C.pcap_open_live(C.CString("lo"), C.int(MAXIMUM_SNAPLEN), C.int(0), C.int(0), buf)
+	cptr := C.pcap_open_live(C.CString(mustFindUpDevice()), C.int(MAXIMUM_SNAPLEN), C.int(0), C.int(0), buf)
 	if cptr == nil {
 		log.Fatalf("failed to pcap_open_live: %+v\n", C.GoString(buf))
 	}

@@ -32,8 +32,17 @@ type Skb struct {
 	Data []byte
 }
 
+type LoadOptions struct {
+	Filter    []bpf.Instruction
+	BpfConfig BpfConfig
+}
+
+type BpfConfig struct {
+	SkbTrack bool
+}
+
 type BpfObjects interface {
-	Load(cbpf []bpf.Instruction) error
+	Load(LoadOptions) error
 	IngressFilter() *ebpf.Program
 	EgressFilter() *ebpf.Program
 	PollSkb(context.Context) (<-chan Skb, error)

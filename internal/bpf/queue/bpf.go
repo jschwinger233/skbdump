@@ -14,6 +14,37 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -no-strip -target native -type skb_meta -type skb_data Skbdump ./skbdump.c -- -I../headers -I. -Wall
 
+const (
+	/*
+				00000000000467c8 <on_ingress>:
+				; {
+					36089:	r6 = r1
+				; 	bpf_skb_pull_data(skb, 0);
+					36090:	r2 = 0
+					36091:	call 39
+				; 	__u64 skb_addr = (__u64)(void *)skb;
+					36092:	*(u64 *)(r10 - 104) = r6
+				; 	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_address, &skb_addr))
+					36093:	r1 = 0 ll
+					36095:	r1 = *(u8 *)(r1 + 0)
+					36096:	if r1 == 0 goto +6 <LBB1501_2>
+					36097:	r2 = r10
+					36098:	r2 += -104
+				; 	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_address, &skb_addr))
+					36099:	r1 = 0 ll
+					36101:	call 1
+		GotoIndex ->		36102:	if r0 != 0 goto +11 <LBB1501_4>
+
+				0000000000046838 <LBB1501_2>:
+				; 	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end))
+					36103:	r1 = *(u32 *)(r6 + 80)
+					36104:	r2 = *(u32 *)(r6 + 76)
+		FilterIndex ->		36105:	if r2 >= r1 goto +72 <LBB1501_7>
+	*/
+	FilterIndex = 14
+	GotoIndex   = 11
+)
+
 type QueueBpfObjects struct {
 	spec *ebpf.CollectionSpec
 	objs *SkbdumpObjects
@@ -53,18 +84,17 @@ func (o *QueueBpfObjects) setFilter(cbpfFilter []bpf.Instruction) (err error) {
 		asm.Return().WithSymbol("return"),           // else return TC_ACT_OK
 		asm.Mov.Imm(asm.R0, 0).WithSymbol("continue"),
 	)
-	ingressInsts := o.spec.Programs["on_ingress"].Instructions
-	ingressInsts = append(ingressInsts[:6], append(ebpfFilter, ingressInsts[7:]...)...)
-	o.spec.Programs["on_ingress"].Instructions = ingressInsts
 
-	egressInsts := o.spec.Programs["on_egress"].Instructions
-	egressInsts = append(egressInsts[:6], append(ebpfFilter, egressInsts[7:]...)...)
-	o.spec.Programs["on_egress"].Instructions = egressInsts
+	o.spec.Programs["on_ingress"].Instructions = internalbpf.InjectInstructions(o.spec.Programs["on_ingress"].Instructions, ebpfFilter, FilterIndex, FilterIndex+1, []int{GotoIndex})
+	o.spec.Programs["on_egress"].Instructions = internalbpf.InjectInstructions(o.spec.Programs["on_egress"].Instructions, ebpfFilter, FilterIndex, FilterIndex+1, []int{GotoIndex})
 	return
 }
 
-func (o *QueueBpfObjects) Load(cbpfFilter []bpf.Instruction) (err error) {
-	if err = o.setFilter(cbpfFilter); err != nil {
+func (o *QueueBpfObjects) Load(opts internalbpf.LoadOptions) (err error) {
+	if err = errors.WithStack(o.spec.RewriteConstants(map[string]interface{}{"SKBDUMP_CONFIG": opts.BpfConfig})); err != nil {
+		return
+	}
+	if err = o.setFilter(opts.Filter); err != nil {
 		return
 	}
 	if err = errors.WithStack(o.spec.LoadAndAssign(o.objs, nil)); err != nil {

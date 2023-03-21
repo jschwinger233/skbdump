@@ -6,12 +6,16 @@
 #define MAX_QUEUE_SIZE 10000
 #endif
 
-#ifndef ETH_HLEN
-#define ETH_HLEN 14
-#endif
-
 #ifndef MAX_DATA_SIZE
 #define MAX_DATA_SIZE 1500
+#endif
+
+#ifndef MAX_TRACK_SIZE
+#define MAX_TRACK_SIZE 1000
+#endif
+
+#ifndef ETH_HLEN
+#define ETH_HLEN 14
 #endif
 
 #ifndef ETH_P_IP
@@ -56,4 +60,13 @@ struct skb_meta {
 	__u32	tc_index;
 	__u32	cb[5];
 };
+#endif
+
+#ifndef SKBDUMP_CONFIG_DEFINED
+#define SKBDUMP_CONFIG_DEFINED
+struct skbdump_config {
+	bool skb_track;
+};
+
+static volatile const struct skbdump_config SKBDUMP_CONFIG = {};
 #endif
