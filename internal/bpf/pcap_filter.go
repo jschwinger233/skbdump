@@ -11,7 +11,7 @@ import (
 )
 
 /*
-#cgo linux LDFLAGS: -lpcap
+#cgo LDFLAGS: -L/usr/local/lib -lpcap -static
 #include <stdlib.h>
 #include <pcap.h>
 */

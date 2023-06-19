@@ -1,11 +1,16 @@
 before:
   hooks:
     - go mod download
-    - sudo apt-get install libpcap-dev
+    - sudo apt-get install -y curl unzip gcc flex bison make
+    - curl https://github.com/the-tcpdump-group/libpcap/archive/refs/tags/libpcap-1.10.4.zip -OL
+    - unzip libpcap-1.10.4.zip
+    - sh -c 'cd libpcap-libpcap-1.10.4/ && ./configure --enable-dbus=no && make && make install'
 
 builds:
   - id: skbdump
     binary: skbdump
+    flags:
+      - -tags=static
     goos:
       - linux
     goarch:
