@@ -31,7 +31,7 @@ Usage of skbdump:
   -i, --interface string       interface to capture (default "lo")
   -w, --pcap-filename string   output pcap filename (default "skbdump.pcap")
       --perf-output            use bpf_perf_event_output to lift payload size limit
-  -s, --skb-filename string    output skb filename (default "skbdump.skb")
+  -s, --skb-filename string    output skb filename (default "skbdump.meta")
 ```
 
 Please be aware that every capture will dump two files, one is `pcap` file which I recommand you open it by wireshark, and the other is `skb` text file just simply recording skb metadata in JSON.
