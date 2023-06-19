@@ -27,9 +27,9 @@ func init() {
 }
 
 func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
-	direction := " egress"
+	direction := "<"
 	if skb.Meta.IsIngress {
-		direction = "ingress"
+		direction = ">"
 	}
 	firstLayer := layers.LayerTypeEthernet
 	if linktype == layers.LinkTypeRaw {
@@ -42,7 +42,14 @@ func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
 			firstLayer = layers.LayerTypeARP
 		}
 	}
-	fmt.Printf("%s@%d %016x ", direction, skb.Meta.Ifindex, skb.Meta.Address)
+	ifname := "unknown"
+	iface, err := net.InterfaceByIndex(int(skb.Meta.Ifindex))
+	if err != nil {
+		fmt.Printf("failed to convert ifindex to ifname: %+v\n", err)
+	} else {
+		ifname = iface.Name
+	}
+	fmt.Printf("%s%d:%s %016x ", direction, skb.Meta.Ifindex, ifname, skb.Meta.Address)
 	packet := gopacket.NewPacket(skb.Data, firstLayer, gopacket.NoCopy)
 
 	layerNum := len(packet.Layers())

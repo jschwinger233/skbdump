@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cilium/ebpf"
@@ -97,8 +98,20 @@ func (o *QueueBpfObjects) Load(opts internalbpf.LoadOptions) (err error) {
 	if err = o.setFilter(opts.Filter); err != nil {
 		return
 	}
-	if err = errors.WithStack(o.spec.LoadAndAssign(o.objs, nil)); err != nil {
-		return
+	if err = errors.WithStack(o.spec.LoadAndAssign(o.objs, &ebpf.CollectionOptions{
+		Programs: ebpf.ProgramOptions{
+			LogLevel: ebpf.LogLevelInstruction,
+			LogSize:  ebpf.DefaultVerifierLogSize,
+		},
+	})); err != nil {
+		var (
+			ve          *ebpf.VerifierError
+			verifierLog string
+		)
+		if errors.As(err, &ve) {
+			verifierLog = fmt.Sprintf("Verifier error: %+v\n", ve)
+		}
+		return errors.WithMessage(err, verifierLog)
 	}
 	return nil
 }
