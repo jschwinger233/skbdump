@@ -18,11 +18,7 @@ Please download the latest binary in the [releases](https://github.com/jschwinge
 
 ### Requirements
 
-[libpcap](https://www.tcpdump.org/) is required for Linux, for Ubuntu:
-
-```bash
-apt install libpcap-dev
-```
+Linux kernel version must be larger than 5.5.
 
 # Usage
 
@@ -32,9 +28,10 @@ Usage of skbdump:
   -w, --pcap-filename string   output pcap filename (default "skbdump.pcap")
       --perf-output            use bpf_perf_event_output to lift payload size limit
   -s, --skb-filename string    output skb filename (default "skbdump.meta")
+  -t, --skb-track              track skb by address
 ```
 
-Please be aware that every capture will dump two files, one is `pcap` file which I recommand you open it by wireshark, and the other is `skb` text file just simply recording skb metadata in JSON.
+Please be aware that every capture will dump two files, one is `pcap` file which I recommand you open it by wireshark, and the other is `meta` text file just simply recording skb metadata in JSON.
 
 ### Some examples:
 
