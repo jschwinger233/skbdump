@@ -29,13 +29,15 @@ struct bpf_map_def SEC("maps") skb_address = {
 static __always_inline
 bool pcap_filter(void *data, void* data_end)
 {
-	return data_end > data;
+	bpf_printk("%p %p\n", data, data_end);
+	return data < data_end;
 }
 
 static __always_inline
 void handle_skb(struct __sk_buff *skb, bool ingress)
 {
 	struct skb_meta meta;
+	__builtin_memset(&meta, 0, sizeof(meta));
 	bpf_skb_pull_data(skb, 0);
 
 	__u64 skb_addr = (__u64)(void *)skb;
@@ -48,7 +50,6 @@ void handle_skb(struct __sk_buff *skb, bool ingress)
 	bpf_map_update_elem(&skb_address, &skb_addr, &TRUE, BPF_ANY);
 
 cont:
-	__builtin_memset(&meta, 0, sizeof(meta));
 	meta.is_ingress = ingress;
 	meta.time_ns = bpf_ktime_get_ns();
 	meta.address = (long)(void *)skb;

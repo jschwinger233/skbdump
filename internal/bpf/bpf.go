@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/cilium/ebpf"
-	"golang.org/x/net/bpf"
 )
 
 type Meta struct {
@@ -33,7 +32,7 @@ type Skb struct {
 }
 
 type LoadOptions struct {
-	Filter    []bpf.Instruction
+	Filter    string
 	BpfConfig BpfConfig
 }
 
