@@ -8,12 +8,9 @@ import (
 	"unsafe"
 
 	"github.com/cilium/ebpf"
-	"github.com/cilium/ebpf/asm"
 	"github.com/cilium/ebpf/perf"
-	"github.com/cloudflare/cbpfc"
 	internalbpf "github.com/jschwinger233/skbdump/internal/bpf"
 	"github.com/pkg/errors"
-	"golang.org/x/net/bpf"
 )
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -no-strip -target native -type skb_meta Skbdump ./skbdump.c -- -I../headers -I. -Wall
@@ -39,42 +36,9 @@ func New() (_ *PerfBpfObjects, err error) {
 	}, nil
 }
 
-func (o *PerfBpfObjects) setFilter(cbpfFilter []bpf.Instruction) (err error) {
-	if len(cbpfFilter) == 0 {
-		return
-	}
-
-	ebpfFilter, err := cbpfc.ToEBPF(cbpfFilter, cbpfc.EBPFOpts{
-		PacketStart: asm.R2, // skb->data
-		PacketEnd:   asm.R1, // skb->data_end
-		Result:      asm.R4,
-		ResultLabel: "result",
-		Working:     [4]asm.Register{asm.R4, asm.R5, asm.R8, asm.R9},
-		LabelPrefix: "filter",
-	})
-	if err != nil {
-		return
-	}
-
-	ebpfFilter = append(ebpfFilter,
-		asm.Mov.Imm(asm.R0, 0).WithSymbol("result"), // r0 = TC_ACT_OK
-		asm.JNE.Imm(asm.R4, 0, "continue"),          // if r4 != 0 (match): jump to continue
-		asm.Return().WithSymbol("return"),           // else return TC_ACT_OK
-		asm.Mov.Imm(asm.R0, 0).WithSymbol("continue"),
-	)
-	ingressInsts := o.spec.Programs["on_ingress"].Instructions
-	ingressInsts = append(ingressInsts[:6], append(ebpfFilter, ingressInsts[7:]...)...)
-	o.spec.Programs["on_ingress"].Instructions = ingressInsts
-
-	egressInsts := o.spec.Programs["on_egress"].Instructions
-	egressInsts = append(egressInsts[:6], append(ebpfFilter, egressInsts[7:]...)...)
-	o.spec.Programs["on_egress"].Instructions = egressInsts
-	return
-}
-
 func (o *PerfBpfObjects) Load(opts internalbpf.LoadOptions) (err error) {
-	if err = o.setFilter(opts.Filter); err != nil {
-		return
+	for _, prog := range o.spec.Programs {
+		internalbpf.InjectPcapFilter(prog, opts.Filter)
 	}
 	if err = errors.WithStack(o.spec.LoadAndAssign(o.objs, nil)); err != nil {
 		return

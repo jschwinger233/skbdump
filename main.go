@@ -38,7 +38,7 @@ func main() {
 	defer stop()
 
 	if err = bpfObjects.Load(bpf.LoadOptions{
-		Filter:    bpf.MustPcapCompile(config.PcapFilterExp),
+		Filter:    config.PcapFilterExp,
 		BpfConfig: bpf.BpfConfig{SkbTrack: config.SkbTrack},
 	}); err != nil {
 		return
