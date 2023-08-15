@@ -4,9 +4,9 @@ import (
 	"log"
 	"strings"
 
-	"github.com/jschwinger233/skbdump/internal/bpf"
-	"github.com/jschwinger233/skbdump/internal/bpf/perf"
-	"github.com/jschwinger233/skbdump/internal/bpf/queue"
+	"github.com/jschwinger233/skbdump/bpf"
+	"github.com/jschwinger233/skbdump/bpf/perf"
+	"github.com/jschwinger233/skbdump/bpf/queue"
 	flag "github.com/spf13/pflag"
 )
 

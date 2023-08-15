@@ -40,7 +40,7 @@ func InjectPcapFilter(program *ebpf.ProgramSpec, filterExpr string) (err error) 
 			}
 			symbol := gotoIns.Symbol()
 			if symbol == "" {
-				symbol = fmt.Sprintf("skbdump_%d", idx)
+				symbol = fmt.Sprintf("pcap_inject_%d", idx)
 				*gotoIns = gotoIns.WithSymbol(symbol)
 			}
 			program.Instructions[idx] = program.Instructions[idx].WithReference(symbol)

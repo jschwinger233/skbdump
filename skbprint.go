@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
-	"github.com/jschwinger233/skbdump/internal/bpf"
+	"github.com/jschwinger233/skbdump/bpf"
 )
 
 var strfuncs map[string]func([]byte) string

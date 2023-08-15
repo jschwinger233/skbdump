@@ -14,8 +14,8 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
-	"github.com/jschwinger233/skbdump/internal/bpf"
-	"github.com/jschwinger233/skbdump/internal/dev"
+	"github.com/jschwinger233/skbdump/bpf"
+	"github.com/jschwinger233/skbdump/dev"
 	"github.com/pkg/errors"
 )
 

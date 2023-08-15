@@ -9,7 +9,7 @@ import (
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/perf"
-	internalbpf "github.com/jschwinger233/skbdump/internal/bpf"
+	internalbpf "github.com/jschwinger233/skbdump/bpf"
 	"github.com/pkg/errors"
 )
 

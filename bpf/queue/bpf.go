@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/cilium/ebpf"
-	internalbpf "github.com/jschwinger233/skbdump/internal/bpf"
+	internalbpf "github.com/jschwinger233/skbdump/bpf"
 	"github.com/pkg/errors"
 )
 
