@@ -26,11 +26,10 @@ struct bpf_map_def SEC("maps") skb_address = {
 	.max_entries = MAX_TRACK_SIZE,
 };
 
-static __always_inline
+static __noinline
 bool pcap_filter(void *data, void* data_end)
 {
-	bpf_printk("%p %p\n", data, data_end);
-	return data < data_end;
+	return data != data_end;
 }
 
 static __always_inline
