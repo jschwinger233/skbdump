@@ -28,7 +28,7 @@ func InjectPcapFilter(program *ebpf.ProgramSpec, filterExpr string) (err error) 
 		PacketEnd:   asm.R2,
 		Result:      asm.R0,
 		ResultLabel: "result",
-		Working:     [4]asm.Register{asm.R3, asm.R4, asm.R5, asm.R6},
+		Working:     [4]asm.Register{asm.R3, asm.R4, asm.R5, asm.R0},
 		LabelPrefix: "filter",
 		StackOffset: 0,
 	})
@@ -37,8 +37,9 @@ func InjectPcapFilter(program *ebpf.ProgramSpec, filterExpr string) (err error) 
 	}
 
 	filterEbpf[0] = filterEbpf[0].WithMetadata(program.Instructions[injectIdx].Metadata)
+	program.Instructions[injectIdx] = program.Instructions[injectIdx].WithMetadata(asm.Metadata{})
 	program.Instructions = append(program.Instructions[:injectIdx],
-		append(filterEbpf, program.Instructions[injectIdx+1:]...)...,
+		append(filterEbpf, program.Instructions[injectIdx:]...)...,
 	)
 
 	return nil
