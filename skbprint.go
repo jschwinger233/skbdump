@@ -22,6 +22,7 @@ func init() {
 		"IPv6":     stringifyIPv6,
 		"UDP":      stringifyUDP,
 		"TCP":      stringifyTCP,
+		"IPSecESP": stringifyESP,
 		"Payload":  stringifyPayload,
 	}
 }
@@ -50,15 +51,16 @@ func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
 		ifname = iface.Name
 	}
 	fmt.Printf("%s%d:%s %016x ", direction, skb.Meta.Ifindex, ifname, skb.Meta.Address)
-	packet := gopacket.NewPacket(skb.Data, firstLayer, gopacket.NoCopy)
+	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
 
+	packet := gopacket.NewPacket(skb.Data, firstLayer, gopacket.NoCopy)
 	layerNum := len(packet.Layers())
 	for idx, layer := range packet.Layers() {
 
 		layerType := layer.LayerType().String()
 		strfunc, ok := strfuncs[layerType]
 		if ok {
-			fmt.Printf("%s: %s", layerType, strfunc(layer.LayerContents()))
+			fmt.Printf("%s=%s", layerType, strfunc(layer.LayerContents()))
 		} else {
 			fmt.Printf("%s", layerType)
 		}
@@ -72,7 +74,7 @@ func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
 }
 
 func stringifyEthernet(data []byte) string {
-	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x > %02x:%02x:%02x:%02x:%02x:%02x",
+	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x>%02x:%02x:%02x:%02x:%02x:%02x",
 		data[6], data[7], data[8], data[9], data[10], data[11],
 		data[0], data[1], data[2], data[3], data[4], data[5],
 	)
@@ -81,7 +83,7 @@ func stringifyEthernet(data []byte) string {
 func stringifyIPv4(data []byte) string {
 	src := net.IPv4(data[12], data[13], data[14], data[15])
 	dest := net.IPv4(data[16], data[17], data[18], data[19])
-	return fmt.Sprintf("%s > %s", src.String(), dest.String())
+	return fmt.Sprintf("%s>%s", src.String(), dest.String())
 }
 
 func stringifyARP(data []byte) string {
@@ -113,13 +115,13 @@ func stringifyARP(data []byte) string {
 func stringifyIPv6(data []byte) string {
 	src := net.IP{data[8], data[9], data[10], data[11], data[12], data[13], data[14], data[15], data[16], data[17], data[18], data[19], data[20], data[21], data[22], data[23]}
 	dest := net.IP{data[24], data[25], data[26], data[27], data[28], data[29], data[30], data[31], data[32], data[33], data[34], data[35], data[36], data[37], data[38], data[39]}
-	return fmt.Sprintf("%s > %s", src.To16().String(), dest.To16().String())
+	return fmt.Sprintf("%s>%s", src.To16().String(), dest.To16().String())
 }
 
 func stringifyUDP(data []byte) string {
 	sport := binary.BigEndian.Uint16(data[:2])
 	dport := binary.BigEndian.Uint16(data[2:4])
-	return fmt.Sprintf("%d > %d", sport, dport)
+	return fmt.Sprintf("%d>%d", sport, dport)
 }
 
 func stringifyTCP(data []byte) string {
@@ -146,7 +148,13 @@ func stringifyTCP(data []byte) string {
 	}
 	seq := binary.BigEndian.Uint32(data[4:8])
 	ack := binary.BigEndian.Uint32(data[8:12])
-	return fmt.Sprintf("%d > %d [%s] S %d . %d", sport, dport, strings.Join(flags, ""), seq%10000, ack%10000)
+	return fmt.Sprintf("%d>%d[%s]seq:%d,ack=%d", sport, dport, strings.Join(flags, ""), seq%10000, ack%10000)
+}
+
+func stringifyESP(data []byte) string {
+	spi := binary.BigEndian.Uint32(data[:4])
+	seq := binary.BigEndian.Uint32(data[4:8])
+	return fmt.Sprintf("spi:%d,seq:%d", spi, seq)
 }
 
 func stringifyPayload(data []byte) string {
