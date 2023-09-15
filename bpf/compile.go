@@ -73,10 +73,11 @@ func CompileEbpf(expr string, opts cbpfc.EBPFOpts) (insts asm.Instructions, err 
 func adjustEbpf(insts asm.Instructions, opts cbpfc.EBPFOpts) (newInsts asm.Instructions, err error) {
 
 	insts = append(insts,
-		asm.Mov.Imm(asm.R0, 0).WithSymbol("result"), // r0 = TC_ACT_OK
-		asm.JNE.Imm(opts.Result, 0, "continue"),     // if %result != 0 (match): jump to continue
-		asm.Return().WithSymbol("return"),           // else return TC_ACT_OK
-		asm.Mov.Imm(asm.R0, 0).WithSymbol("continue"),
+		asm.Mov.Reg(asm.R1, asm.R0).WithSymbol("result"), // r1 = r0 = $result
+		asm.Mov.Imm(asm.R2, 0),                           // r2 = 0
+		asm.Mov.Imm(asm.R3, 0),                           // r3 = 0
+		asm.Mov.Imm(asm.R4, 0),                           // r4 = 0
+		asm.Mov.Imm(asm.R5, 0),                           // r5 = 0
 	)
 
 	return insts, nil

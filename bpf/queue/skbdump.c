@@ -26,11 +26,10 @@ struct bpf_map_def SEC("maps") skb_address = {
 	.max_entries = MAX_TRACK_SIZE,
 };
 
-static __always_inline
-bool pcap_filter(void *data, void* data_end)
+static __noinline
+bool pcap_filter(void *data, void* data_end, void *_, void *__, void *___)
 {
-	bpf_printk("%p %p\n", data, data_end);
-	return data < data_end;
+	return data != data_end && _ == __ && __ == ___;
 }
 
 static __always_inline
@@ -44,7 +43,7 @@ void handle_skb(struct __sk_buff *skb, bool ingress)
 	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_address, &skb_addr))
 		goto cont;
 
-	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end))
+	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end, (void *)skb, (void *)skb, (void *)skb))
 		return;
 
 	bpf_map_update_elem(&skb_address, &skb_addr, &TRUE, BPF_ANY);
