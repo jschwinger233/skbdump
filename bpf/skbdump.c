@@ -27,9 +27,9 @@ struct bpf_map_def SEC("maps") skb_address = {
 };
 
 static __noinline
-bool pcap_filter(void *data, void* data_end, void *_, void *__, void *___)
+bool pcap_filter(void *_skb, void *__skb, void *___skb, void *data, void* data_end)
 {
-	return data != data_end && _ == __ && __ == ___;
+	return data != data_end && _skb == __skb && __skb == ___skb;
 }
 
 static __always_inline
@@ -43,7 +43,7 @@ void handle_skb(struct __sk_buff *skb, bool ingress)
 	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_address, &skb_addr))
 		goto cont;
 
-	if (!pcap_filter((void *)(long)skb->data, (void *)(long)skb->data_end, (void *)skb, (void *)skb, (void *)skb))
+	if (!pcap_filter((void *)skb, (void *)skb, (void *)skb, (void *)(long)skb->data, (void *)(long)skb->data_end))
 		return;
 
 	bpf_map_update_elem(&skb_address, &skb_addr, &TRUE, BPF_ANY);

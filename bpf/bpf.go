@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/cilium/ebpf"
+	"github.com/jschwinger233/elibpcap"
 	"github.com/pkg/errors"
 )
 
@@ -74,7 +75,14 @@ func (o *QueueBpfObjects) Load(opts LoadOptions) (err error) {
 	}
 
 	for _, progName := range []string{"on_ingress", "on_egress"} {
-		if err = InjectPcapFilter(o.spec.Programs[progName], opts.Filter); err != nil {
+		prog, ok := o.spec.Programs[progName]
+		if !ok {
+			return errors.Errorf("program %s not found", progName)
+		}
+		if prog.Instructions, err = elibpcap.Inject(opts.Filter,
+			prog.Instructions,
+			elibpcap.Options{AtBpf2Bpf: "pcap_filter"},
+		); err != nil {
 			return
 		}
 	}
