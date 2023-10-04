@@ -46,30 +46,32 @@ type BpfConfig struct {
 	SkbTrack bool
 }
 
-type BpfObjects interface {
+type Objects interface {
 	Load(LoadOptions) error
-	IngressFilter() *ebpf.Program
-	EgressFilter() *ebpf.Program
+	TcIngress() *ebpf.Program
+	TcEgress() *ebpf.Program
+	Kprobe() *ebpf.Program
+	Kretprobe() *ebpf.Program
 	PollSkb(context.Context) (<-chan Skb, error)
 }
 
-type QueueBpfObjects struct {
+type BpfObjects struct {
 	spec *ebpf.CollectionSpec
 	objs *SkbdumpObjects
 }
 
-func New() (_ *QueueBpfObjects, err error) {
+func New() (_ *BpfObjects, err error) {
 	spec, err := LoadSkbdump()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &QueueBpfObjects{
+	return &BpfObjects{
 		spec: spec,
 		objs: &SkbdumpObjects{},
 	}, nil
 }
 
-func (o *QueueBpfObjects) Load(opts LoadOptions) (err error) {
+func (o *BpfObjects) Load(opts LoadOptions) (err error) {
 	if err = errors.WithStack(o.spec.RewriteConstants(map[string]interface{}{"SKBDUMP_CONFIG": opts.BpfConfig})); err != nil {
 		return
 	}
@@ -104,14 +106,22 @@ func (o *QueueBpfObjects) Load(opts LoadOptions) (err error) {
 	return nil
 }
 
-func (o *QueueBpfObjects) EgressFilter() *ebpf.Program {
+func (o *BpfObjects) TcIngress() *ebpf.Program {
 	return o.objs.OnEgress
 }
-func (o *QueueBpfObjects) IngressFilter() *ebpf.Program {
+func (o *BpfObjects) TcEgress() *ebpf.Program {
 	return o.objs.OnIngress
 }
 
-func (o *QueueBpfObjects) PollSkb(ctx context.Context) (_ <-chan Skb, err error) {
+func (o *BpfObjects) Kprobe() *ebpf.Program {
+	return nil
+}
+
+func (o *BpfObjects) Kretprobe() *ebpf.Program {
+	return nil
+}
+
+func (o *BpfObjects) PollSkb(ctx context.Context) (_ <-chan Skb, err error) {
 	ch := make(chan Skb)
 	go func() {
 		defer close(ch)

@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	Iface         string
+	Skbfuncs      string
 	SkbTrack      bool
 	SkbFilename   string
 	PcapFilename  string
@@ -17,12 +18,13 @@ type Config struct {
 }
 
 var (
-	config     Config
-	bpfObjects bpf.BpfObjects
+	config  Config
+	bpfObjs bpf.Objects
 )
 
 func mustInitConfig() {
 	flag.StringVarP(&config.Iface, "interface", "i", "lo", "interface to capture")
+	flag.StringVarP(&config.Skbfuncs, "skbfuncs", "k", "", "skb kfuncs to trace, e.g. \"ip_rcv,tcp_rcv\"")
 	flag.StringVarP(&config.SkbFilename, "skb-filename", "s", "skbdump.meta", "output skb filename")
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
 	flag.BoolVarP(&config.SkbTrack, "skb-track", "t", false, "track skb by address")
@@ -30,7 +32,7 @@ func mustInitConfig() {
 	config.PcapFilterExp = strings.Join(flag.Args(), " ")
 
 	var err error
-	bpfObjects, err = bpf.New()
+	bpfObjs, err = bpf.New()
 	if err != nil {
 		log.Fatalf("%+v", err)
 	}

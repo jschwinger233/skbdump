@@ -15,7 +15,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcapgo"
 	"github.com/jschwinger233/skbdump/bpf"
-	"github.com/jschwinger233/skbdump/dev"
+	"github.com/jschwinger233/skbdump/target"
 	"github.com/pkg/errors"
 )
 
@@ -37,36 +37,23 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err = bpfObjects.Load(bpf.LoadOptions{
+	if err = bpfObjs.Load(bpf.LoadOptions{
 		Filter:    config.PcapFilterExp,
 		BpfConfig: bpf.BpfConfig{SkbTrack: config.SkbTrack},
 	}); err != nil {
 		return
 	}
 
-	devices, err := dev.FindDevices(config.Iface)
+	targets, err := target.Parse(config.Iface, config.Skbfuncs)
 	if err != nil {
 		return
 	}
 
-	for _, device := range devices {
-		if err = device.EnsureTcQdisc(); err != nil {
+	for _, target := range targets {
+		if err = target.Attach(bpfObjs); err != nil {
 			return
 		}
-
-		delIngress, e := device.AddIngressFilter(bpfObjects.IngressFilter())
-		if e != nil {
-			err = e
-			return
-		}
-		defer delIngress()
-
-		delEgress, e := device.AddEgressFilter(bpfObjects.EgressFilter())
-		if e != nil {
-			err = e
-			return
-		}
-		defer delEgress()
+		defer target.Detach()
 	}
 
 	f, err := os.Create(config.PcapFilename)
@@ -77,9 +64,10 @@ func main() {
 	defer f.Close()
 	pcapw := pcapgo.NewWriter(f)
 	linktype := layers.LinkTypeEthernet
-	if len(devices) == 1 && devices[0].IsL3Device() {
-		linktype = layers.LinkTypeRaw
-	}
+	// TODO: support l3 device
+	//if len(devices) == 1 && devices[0].IsL3Device() {
+	//	linktype = layers.LinkTypeRaw
+	//}
 	if err = errors.WithStack(pcapw.WriteFileHeader(1600, linktype)); err != nil {
 		return
 	}
@@ -99,7 +87,7 @@ func main() {
 	bootTime := host.Info().BootTime
 
 	println("start tracing")
-	skbChan, err := bpfObjects.PollSkb(ctx)
+	skbChan, err := bpfObjs.PollSkb(ctx)
 	if err != nil {
 		return
 	}
@@ -127,3 +115,12 @@ func main() {
 
 	}
 }
+
+/*
+2. target interface
+2. k and kr
+3. elibpcap
+4. -k --kfuncs, refactor?
+5. don't output pcap by default
+6. perf
+*/
