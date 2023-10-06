@@ -28,9 +28,14 @@ func init() {
 }
 
 func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
-	direction := "<"
-	if skb.Meta.IsIngress {
+	var direction string
+	switch skb.Meta.At {
+	case 1:
 		direction = ">"
+	case 0:
+		direction = "<"
+	default:
+		panic("not implemented")
 	}
 	firstLayer := layers.LayerTypeEthernet
 	if linktype == layers.LinkTypeRaw {

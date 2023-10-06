@@ -18,24 +18,17 @@ type SkbdumpSkbData struct {
 }
 
 type SkbdumpSkbMeta struct {
-	IsIngress      bool
-	_              [7]byte
-	Address        uint64
-	TimeNs         uint64
-	Len            uint32
-	PktType        uint32
-	Mark           uint32
-	QueueMapping   uint32
-	Protocol       uint32
-	VlanPresent    uint32
-	VlanTci        uint32
-	VlanProto      uint32
-	Priority       uint32
-	IngressIfindex uint32
-	Ifindex        uint32
-	TcIndex        uint32
-	Cb             [5]uint32
-	_              [4]byte
+	At       uint64
+	Address  uint64
+	TimeNs   uint64
+	Data     uint64
+	DataEnd  uint64
+	Len      uint32
+	Protocol uint32
+	PktType  uint32
+	Mark     uint32
+	Ifindex  uint32
+	Cb       [5]uint32
 }
 
 // LoadSkbdump returns the embedded CollectionSpec for Skbdump.
@@ -1587,11 +1580,11 @@ type SkbdumpProgramSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type SkbdumpMapSpecs struct {
-	BpfStack    *ebpf.MapSpec `ebpf:"bpf_stack"`
-	DataQueue   *ebpf.MapSpec `ebpf:"data_queue"`
-	MetaQueue   *ebpf.MapSpec `ebpf:"meta_queue"`
-	SkbAddress  *ebpf.MapSpec `ebpf:"skb_address"`
-	SkbDataCall *ebpf.MapSpec `ebpf:"skb_data_call"`
+	BpfStack     *ebpf.MapSpec `ebpf:"bpf_stack"`
+	DataQueue    *ebpf.MapSpec `ebpf:"data_queue"`
+	MetaQueue    *ebpf.MapSpec `ebpf:"meta_queue"`
+	SkbAddresses *ebpf.MapSpec `ebpf:"skb_addresses"`
+	SkbDataCall  *ebpf.MapSpec `ebpf:"skb_data_call"`
 }
 
 // SkbdumpObjects contains all objects after they have been loaded into the kernel.
@@ -1613,11 +1606,11 @@ func (o *SkbdumpObjects) Close() error {
 //
 // It can be passed to LoadSkbdumpObjects or ebpf.CollectionSpec.LoadAndAssign.
 type SkbdumpMaps struct {
-	BpfStack    *ebpf.Map `ebpf:"bpf_stack"`
-	DataQueue   *ebpf.Map `ebpf:"data_queue"`
-	MetaQueue   *ebpf.Map `ebpf:"meta_queue"`
-	SkbAddress  *ebpf.Map `ebpf:"skb_address"`
-	SkbDataCall *ebpf.Map `ebpf:"skb_data_call"`
+	BpfStack     *ebpf.Map `ebpf:"bpf_stack"`
+	DataQueue    *ebpf.Map `ebpf:"data_queue"`
+	MetaQueue    *ebpf.Map `ebpf:"meta_queue"`
+	SkbAddresses *ebpf.Map `ebpf:"skb_addresses"`
+	SkbDataCall  *ebpf.Map `ebpf:"skb_data_call"`
 }
 
 func (m *SkbdumpMaps) Close() error {
@@ -1625,7 +1618,7 @@ func (m *SkbdumpMaps) Close() error {
 		m.BpfStack,
 		m.DataQueue,
 		m.MetaQueue,
-		m.SkbAddress,
+		m.SkbAddresses,
 		m.SkbDataCall,
 	)
 }

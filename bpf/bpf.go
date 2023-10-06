@@ -12,28 +12,8 @@ import (
 
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -no-strip -target native -type skb_meta -type skb_data Skbdump ./skbdump.c -- -I./headers -I. -Wall
 
-type Meta struct {
-	IsIngress bool
-	TimeNs    uint64
-	Address   uint64
-
-	Len            uint32
-	PktType        uint32
-	Mark           uint32
-	QueueMapping   uint32
-	Protocol       uint32
-	VlanPresent    uint32
-	VlanTci        uint32
-	VlanProto      uint32
-	Priority       uint32
-	IngressIfindex uint32
-	Ifindex        uint32
-	TcIndex        uint32
-	Cb             [5]uint32
-}
-
 type Skb struct {
-	Meta
+	Meta SkbdumpSkbMeta
 	Data []byte
 }
 
@@ -83,7 +63,7 @@ func (o *BpfObjects) Load(opts LoadOptions) (err error) {
 		}
 		if prog.Instructions, err = elibpcap.Inject(opts.Filter,
 			prog.Instructions,
-			elibpcap.Options{AtBpf2Bpf: "pcap_filter"},
+			elibpcap.Options{AtBpf2Bpf: "tc_pcap_filter"},
 		); err != nil {
 			return
 		}
@@ -154,24 +134,7 @@ func (o *BpfObjects) PollSkb(ctx context.Context) (_ <-chan Skb, err error) {
 				}
 			}
 			ch <- Skb{
-				Meta: Meta{
-					IsIngress:      meta.IsIngress,
-					TimeNs:         meta.TimeNs,
-					Address:        meta.Address,
-					Len:            meta.Len,
-					PktType:        meta.PktType,
-					Mark:           meta.Mark,
-					QueueMapping:   meta.QueueMapping,
-					Protocol:       meta.Protocol,
-					VlanPresent:    meta.VlanPresent,
-					VlanTci:        meta.VlanTci,
-					VlanProto:      meta.VlanProto,
-					Priority:       meta.Priority,
-					IngressIfindex: meta.IngressIfindex,
-					Ifindex:        meta.Ifindex,
-					TcIndex:        meta.TcIndex,
-					Cb:             meta.Cb,
-				},
+				Meta: meta,
 				Data: data.Content[:data.Len],
 			}
 		}

@@ -117,10 +117,9 @@ func main() {
 }
 
 /*
-2. target interface
 2. k and kr
 3. elibpcap
-4. -k --kfuncs, refactor?
+4. meta???
 5. don't output pcap by default
 6. perf
 */

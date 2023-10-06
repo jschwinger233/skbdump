@@ -19,7 +19,7 @@ struct bpf_map_def SEC("maps") meta_queue = {
 	.max_entries = MAX_QUEUE_SIZE,
 };
 
-struct bpf_map_def SEC("maps") skb_address = {
+struct bpf_map_def SEC("maps") skb_addresses = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u64),
 	.value_size = sizeof(bool),
@@ -27,7 +27,7 @@ struct bpf_map_def SEC("maps") skb_address = {
 };
 
 static __noinline
-bool pcap_filter(void *_skb, void *__skb, void *___skb, void *data, void* data_end)
+bool tc_pcap_filter(void *_skb, void *__skb, void *___skb, void *data, void* data_end)
 {
 	return data != data_end && _skb == __skb && __skb == ___skb;
 }
@@ -36,34 +36,34 @@ static __always_inline
 void handle_skb(struct __sk_buff *skb, bool ingress)
 {
 	struct skb_meta meta;
+
+	__u64 skb_addr = (__u64)(void *)skb;
+	if (SKBDUMP_CONFIG.skb_track)
+		if (bpf_map_lookup_elem(&skb_addresses, &skb_addr))
+			goto cont;
+
+	if (!tc_pcap_filter((void *)skb, (void *)skb, (void *)skb,
+			 (void *)(long)skb->data, (void *)(long)skb->data_end))
+		return;
+
+	if (SKBDUMP_CONFIG.skb_track)
+		bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
+
+cont:
 	__builtin_memset(&meta, 0, sizeof(meta));
 	bpf_skb_pull_data(skb, skb->len);
 
-	__u64 skb_addr = (__u64)(void *)skb;
-	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_address, &skb_addr))
-		goto cont;
+	meta.at = ingress;
+	meta.time_ns = bpf_ktime_get_boot_ns();
+	meta.address = skb_addr;
 
-	if (!pcap_filter((void *)skb, (void *)skb, (void *)skb, (void *)(long)skb->data, (void *)(long)skb->data_end))
-		return;
-
-	bpf_map_update_elem(&skb_address, &skb_addr, &TRUE, BPF_ANY);
-
-cont:
-	meta.is_ingress = ingress;
-	meta.time_ns = bpf_ktime_get_ns();
-	meta.address = (long)(void *)skb;
-	/* copy from skb */
+	meta.data = skb->data;
+	meta.data_end = skb->data_end;
 	meta.len = skb->len;
+	meta.protocol = skb->protocol;
 	meta.pkt_type = skb->pkt_type;
 	meta.mark = skb->mark;
-	meta.queue_mapping = skb->queue_mapping;
-	meta.protocol = skb->protocol;
-	meta.vlan_present = skb->vlan_present;
-	meta.vlan_proto = skb->vlan_proto;
-	meta.priority = skb->priority;
-	meta.ingress_ifindex = skb->ingress_ifindex;
 	meta.ifindex = skb->ifindex;
-	meta.tc_index = skb->tc_index;
 	meta.cb[0] = skb->cb[0];
 	meta.cb[1] = skb->cb[1];
 	meta.cb[2] = skb->cb[2];
