@@ -27,7 +27,7 @@ func init() {
 	}
 }
 
-func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
+func skbPrint(skb bpf.Skbdump, linktype layers.LinkType) {
 	var direction string
 	switch skb.Meta.At {
 	case 1:
@@ -55,10 +55,10 @@ func skbPrint(skb bpf.Skb, linktype layers.LinkType) {
 	} else {
 		ifname = iface.Name
 	}
-	fmt.Printf("%s%d:%s %016x ", direction, skb.Meta.Ifindex, ifname, skb.Meta.Address)
+	fmt.Printf("%s%d:%s %016x ", direction, skb.Meta.Ifindex, ifname, skb.Meta.Skb)
 	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
 
-	packet := gopacket.NewPacket(skb.Data, firstLayer, gopacket.NoCopy)
+	packet := gopacket.NewPacket(skb.Payload[:skb.Meta.Len], firstLayer, gopacket.NoCopy)
 	layerNum := len(packet.Layers())
 	for idx, layer := range packet.Layers() {
 

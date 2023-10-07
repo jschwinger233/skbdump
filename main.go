@@ -100,15 +100,15 @@ func main() {
 		skbPrint(skb, linktype)
 		captureInfo := gopacket.CaptureInfo{
 			Timestamp:      bootTime.Add(time.Duration(skb.Meta.TimeNs)),
-			CaptureLength:  len(skb.Data),
-			Length:         len(skb.Data),
+			CaptureLength:  int(skb.Meta.Len),
+			Length:         int(skb.Meta.Len),
 			InterfaceIndex: int(skb.Meta.Ifindex),
 		}
 		if _, err = skbw.Write(append(jb, '\n')); err != nil {
 			err = errors.WithStack(err)
 			return
 		}
-		if err = pcapw.WritePacket(captureInfo, skb.Data); err != nil {
+		if err = pcapw.WritePacket(captureInfo, skb.Payload[:skb.Meta.Len]); err != nil {
 			err = errors.WithStack(err)
 			return
 		}
@@ -117,7 +117,6 @@ func main() {
 }
 
 /*
-- reduce message from k to u: ringbuf
 - k: get meta only, ns filter
 - elibpcap
 - kr

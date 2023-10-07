@@ -1,9 +1,12 @@
 package bpf
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"log"
+	"unsafe"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/ringbuf"
@@ -11,12 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -no-strip -target native -type skb_meta -type skb_data Skbdump ./skbdump.c -- -I./headers -I. -Wall
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -no-strip -target native -type skbdump Bpf ./skbdump.c -- -I./headers -I. -Wall
 
-type Skb struct {
-	Meta SkbdumpSkbMeta
-	Data []byte
-}
+type Skbdump = BpfSkbdump
 
 type LoadOptions struct {
 	Filter    string
@@ -33,26 +33,26 @@ type Objects interface {
 	TcEgress() *ebpf.Program
 	Kprobe() *ebpf.Program
 	Kretprobe() *ebpf.Program
-	PollSkb(context.Context) (<-chan Skb, error)
+	PollSkb(context.Context) (<-chan Skbdump, error)
 }
 
-type BpfObjects struct {
+type Bpf struct {
 	spec *ebpf.CollectionSpec
-	objs *SkbdumpObjects
+	objs *BpfObjects
 }
 
-func New() (_ *BpfObjects, err error) {
-	spec, err := LoadSkbdump()
+func New() (_ *Bpf, err error) {
+	spec, err := LoadBpf()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &BpfObjects{
+	return &Bpf{
 		spec: spec,
-		objs: &SkbdumpObjects{},
+		objs: &BpfObjects{},
 	}, nil
 }
 
-func (o *BpfObjects) Load(opts LoadOptions) (err error) {
+func (o *Bpf) Load(opts LoadOptions) (err error) {
 	if err = errors.WithStack(o.spec.RewriteConstants(map[string]interface{}{"SKBDUMP_CONFIG": opts.BpfConfig})); err != nil {
 		return
 	}
@@ -87,23 +87,23 @@ func (o *BpfObjects) Load(opts LoadOptions) (err error) {
 	return nil
 }
 
-func (o *BpfObjects) TcIngress() *ebpf.Program {
+func (o *Bpf) TcIngress() *ebpf.Program {
 	return o.objs.OnEgress
 }
-func (o *BpfObjects) TcEgress() *ebpf.Program {
+func (o *Bpf) TcEgress() *ebpf.Program {
 	return o.objs.OnIngress
 }
 
-func (o *BpfObjects) Kprobe() *ebpf.Program {
+func (o *Bpf) Kprobe() *ebpf.Program {
 	return nil
 }
 
-func (o *BpfObjects) Kretprobe() *ebpf.Program {
+func (o *Bpf) Kretprobe() *ebpf.Program {
 	return nil
 }
 
-func (o *BpfObjects) PollSkb(ctx context.Context) (_ <-chan Skb, err error) {
-	ch := make(chan Skb)
+func (o *Bpf) PollSkb(ctx context.Context) (_ <-chan Skbdump, err error) {
+	ch := make(chan Skbdump)
 	go func() {
 		defer close(ch)
 
@@ -128,16 +128,14 @@ func (o *BpfObjects) PollSkb(ctx context.Context) (_ <-chan Skb, err error) {
 				continue
 			}
 
-			meta := SkbdumpSkbMeta{}
-			if err := o.objs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
-				log.Printf("Failed to read meta queue: %+v", err)
+			skb := Skbdump{}
+			if err = binary.Read(bytes.NewBuffer(rec.RawSample), binary.LittleEndian, &skb.Meta); err != nil {
+				log.Printf("Failed to read event: %+v", err)
 				continue
 			}
+			copy(skb.Payload[:], rec.RawSample[unsafe.Sizeof(skb.Meta):])
 
-			ch <- Skb{
-				Meta: meta,
-				Data: rec.RawSample,
-			}
+			ch <- skb
 		}
 	}()
 	return ch, nil

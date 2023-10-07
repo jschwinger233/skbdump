@@ -2,10 +2,6 @@
 #define TC_ACT_OK 0
 #endif
 
-#ifndef MAX_QUEUE_SIZE
-#define MAX_QUEUE_SIZE 10000
-#endif
-
 #ifndef MAX_DATA_SIZE
 #define MAX_DATA_SIZE 1500
 #endif
@@ -36,23 +32,6 @@
 
 #ifndef __maybe_unused
 # define __maybe_unused		__attribute__((__unused__))
-#endif
-
-#ifndef SKB_META_DEFINED
-#define SKB_META_DEFINED
-struct skb_meta {
-	__u64	at;
-	__u64	address;
-	__u64	time_ns;
-
-	__u64	data;
-	__u32	len;
-	__u32	protocol;
-	__u32	pkt_type;
-	__u32	mark;
-	__u32	ifindex;
-	__u32	cb[5];
-};
 #endif
 
 #ifndef SKBDUMP_CONFIG_DEFINED
