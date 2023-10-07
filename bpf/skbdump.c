@@ -58,7 +58,6 @@ cont:
 	meta.address = skb_addr;
 
 	meta.data = skb->data;
-	meta.data_end = skb->data_end;
 	meta.len = skb->len;
 	meta.protocol = skb->protocol;
 	meta.pkt_type = skb->pkt_type;

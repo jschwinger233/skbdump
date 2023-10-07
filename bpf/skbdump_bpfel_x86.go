@@ -12,17 +12,13 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type SkbdumpSkbData struct {
-	Content [1500]uint8
-	Len     uint32
-}
+type SkbdumpSkbData struct{ Content [1500]uint8 }
 
 type SkbdumpSkbMeta struct {
 	At       uint64
 	Address  uint64
 	TimeNs   uint64
 	Data     uint64
-	DataEnd  uint64
 	Len      uint32
 	Protocol uint32
 	PktType  uint32
@@ -1581,7 +1577,7 @@ type SkbdumpProgramSpecs struct {
 // It can be passed ebpf.CollectionSpec.Assign.
 type SkbdumpMapSpecs struct {
 	BpfStack     *ebpf.MapSpec `ebpf:"bpf_stack"`
-	DataQueue    *ebpf.MapSpec `ebpf:"data_queue"`
+	DataRingbuf  *ebpf.MapSpec `ebpf:"data_ringbuf"`
 	MetaQueue    *ebpf.MapSpec `ebpf:"meta_queue"`
 	SkbAddresses *ebpf.MapSpec `ebpf:"skb_addresses"`
 	SkbDataCall  *ebpf.MapSpec `ebpf:"skb_data_call"`
@@ -1607,7 +1603,7 @@ func (o *SkbdumpObjects) Close() error {
 // It can be passed to LoadSkbdumpObjects or ebpf.CollectionSpec.LoadAndAssign.
 type SkbdumpMaps struct {
 	BpfStack     *ebpf.Map `ebpf:"bpf_stack"`
-	DataQueue    *ebpf.Map `ebpf:"data_queue"`
+	DataRingbuf  *ebpf.Map `ebpf:"data_ringbuf"`
 	MetaQueue    *ebpf.Map `ebpf:"meta_queue"`
 	SkbAddresses *ebpf.Map `ebpf:"skb_addresses"`
 	SkbDataCall  *ebpf.Map `ebpf:"skb_data_call"`
@@ -1616,7 +1612,7 @@ type SkbdumpMaps struct {
 func (m *SkbdumpMaps) Close() error {
 	return _SkbdumpClose(
 		m.BpfStack,
-		m.DataQueue,
+		m.DataRingbuf,
 		m.MetaQueue,
 		m.SkbAddresses,
 		m.SkbDataCall,

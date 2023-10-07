@@ -117,9 +117,11 @@ func main() {
 }
 
 /*
-2. k and kr
-3. elibpcap
-4. meta???
-5. don't output pcap by default
-6. perf
+- reduce message from k to u: ringbuf
+- k: get meta only, ns filter
+- elibpcap
+- kr
+- payload: dynamic b_r_k + dynamic ringbuf? fallback: tailcall
+- don't output pcap by default
+- bench
 */

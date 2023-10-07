@@ -3,9 +3,10 @@ package bpf
 import (
 	"context"
 	"fmt"
-	"time"
+	"log"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/ringbuf"
 	"github.com/jschwinger233/elibpcap"
 	"github.com/pkg/errors"
 )
@@ -105,37 +106,37 @@ func (o *BpfObjects) PollSkb(ctx context.Context) (_ <-chan Skb, err error) {
 	ch := make(chan Skb)
 	go func() {
 		defer close(ch)
+
+		dataReader, err := ringbuf.NewReader(o.objs.DataRingbuf)
+		if err != nil {
+			log.Printf("Failed to open ringbuf: %+v", err)
+		}
+		defer dataReader.Close()
+
+		go func() {
+			<-ctx.Done()
+			dataReader.Close()
+		}()
+
 		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
+			rec, err := dataReader.Read()
+			if err != nil {
+				if errors.Is(err, ringbuf.ErrClosed) {
+					return
+				}
+				log.Printf("Failed to read ringbuf: %+v", err)
+				continue
 			}
 
 			meta := SkbdumpSkbMeta{}
 			if err := o.objs.MetaQueue.LookupAndDelete(nil, &meta); err != nil {
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(time.Millisecond):
-					continue
-				}
+				log.Printf("Failed to read meta queue: %+v", err)
+				continue
 			}
-			data := SkbdumpSkbData{}
-			for {
-				if err := o.objs.DataQueue.LookupAndDelete(nil, &data); err == nil {
-					break
-				}
-				select {
-				case <-ctx.Done():
-					return
-				case <-time.After(time.Microsecond):
-					continue
-				}
-			}
+
 			ch <- Skb{
 				Meta: meta,
-				Data: data.Content[:data.Len],
+				Data: rec.RawSample,
 			}
 		}
 	}()

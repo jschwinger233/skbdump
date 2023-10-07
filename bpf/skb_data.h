@@ -3,24 +3,21 @@
 
 struct skb_data {
 	__u8		content[MAX_DATA_SIZE];
-	__u32		len;
 };
 
 // force emitting struct into the ELF.
 const struct skb_data *__ __attribute__((unused));
-
-struct bpf_map_def SEC("maps") data_queue = {
-	.type = BPF_MAP_TYPE_QUEUE,
-	.key_size = 0,
-	.value_size = sizeof(struct skb_data),
-	.max_entries = MAX_QUEUE_SIZE,
-};
 
 struct bpf_map_def SEC("maps") bpf_stack = {
 	.type = BPF_MAP_TYPE_PERCPU_ARRAY,
 	.key_size = sizeof(__u32),
 	.value_size = sizeof(struct skb_data),
 	.max_entries = 1,
+};
+
+struct bpf_map_def SEC("maps") data_ringbuf = {
+	.type = BPF_MAP_TYPE_RINGBUF,
+	.max_entries = 1<<29,
 };
 
 #define TAIL_SKB_DATA(x)							\
@@ -31,9 +28,8 @@ struct bpf_map_def SEC("maps") bpf_stack = {
 		struct skb_data *data = bpf_map_lookup_elem(&bpf_stack, &key);	\
 		if (!data)							\
 			return TC_ACT_OK;					\
-		data->len = x;							\
 		bpf_skb_load_bytes(skb, 0, data, x);				\
-		bpf_map_push_elem(&data_queue, data, BPF_EXIST);		\
+		bpf_ringbuf_output(&data_ringbuf, data, x, 0);			\
 		return TC_ACT_OK;						\
 	}
 

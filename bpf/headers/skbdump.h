@@ -46,7 +46,6 @@ struct skb_meta {
 	__u64	time_ns;
 
 	__u64	data;
-	__u64	data_end;
 	__u32	len;
 	__u32	protocol;
 	__u32	pkt_type;
