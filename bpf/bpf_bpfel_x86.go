@@ -70,6 +70,12 @@ type BpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type BpfProgramSpecs struct {
+	KprobeKfreeSkbmem  *ebpf.ProgramSpec `ebpf:"kprobe_kfree_skbmem"`
+	KprobeSkb1         *ebpf.ProgramSpec `ebpf:"kprobe_skb_1"`
+	KprobeSkb2         *ebpf.ProgramSpec `ebpf:"kprobe_skb_2"`
+	KprobeSkb3         *ebpf.ProgramSpec `ebpf:"kprobe_skb_3"`
+	KprobeSkb4         *ebpf.ProgramSpec `ebpf:"kprobe_skb_4"`
+	KprobeSkb5         *ebpf.ProgramSpec `ebpf:"kprobe_skb_5"`
 	OnEgress           *ebpf.ProgramSpec `ebpf:"on_egress"`
 	OnIngress          *ebpf.ProgramSpec `ebpf:"on_ingress"`
 	TailSkbPayload1    *ebpf.ProgramSpec `ebpf:"tail_skb_payload_1"`
@@ -1622,6 +1628,12 @@ func (m *BpfMaps) Close() error {
 //
 // It can be passed to LoadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type BpfPrograms struct {
+	KprobeKfreeSkbmem  *ebpf.Program `ebpf:"kprobe_kfree_skbmem"`
+	KprobeSkb1         *ebpf.Program `ebpf:"kprobe_skb_1"`
+	KprobeSkb2         *ebpf.Program `ebpf:"kprobe_skb_2"`
+	KprobeSkb3         *ebpf.Program `ebpf:"kprobe_skb_3"`
+	KprobeSkb4         *ebpf.Program `ebpf:"kprobe_skb_4"`
+	KprobeSkb5         *ebpf.Program `ebpf:"kprobe_skb_5"`
 	OnEgress           *ebpf.Program `ebpf:"on_egress"`
 	OnIngress          *ebpf.Program `ebpf:"on_ingress"`
 	TailSkbPayload1    *ebpf.Program `ebpf:"tail_skb_payload_1"`
@@ -3128,6 +3140,12 @@ type BpfPrograms struct {
 
 func (p *BpfPrograms) Close() error {
 	return _BpfClose(
+		p.KprobeKfreeSkbmem,
+		p.KprobeSkb1,
+		p.KprobeSkb2,
+		p.KprobeSkb3,
+		p.KprobeSkb4,
+		p.KprobeSkb5,
 		p.OnEgress,
 		p.OnIngress,
 		p.TailSkbPayload1,
