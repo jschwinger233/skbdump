@@ -24,15 +24,16 @@ type LoadOptions struct {
 }
 
 type BpfConfig struct {
-	SkbTrack bool
+	Netns    uint32
+	SkbTrack uint32
 }
 
 type Objects interface {
 	Load(LoadOptions) error
 	TcIngress() *ebpf.Program
 	TcEgress() *ebpf.Program
-	Kprobe() *ebpf.Program
-	Kretprobe() *ebpf.Program
+	Kprobe(pos int) *ebpf.Program
+	Kretprobe(pos int) *ebpf.Program
 	PollSkb(context.Context) (<-chan Skbdump, error)
 }
 
@@ -94,11 +95,25 @@ func (o *Bpf) TcEgress() *ebpf.Program {
 	return o.objs.OnIngress
 }
 
-func (o *Bpf) Kprobe() *ebpf.Program {
+func (o *Bpf) Kprobe(pos int) *ebpf.Program {
+	switch pos {
+	case 1:
+		return o.objs.OnKprobe1
+	case 2:
+		return o.objs.OnKprobe2
+	case 3:
+		return o.objs.OnKprobe3
+	case 4:
+		return o.objs.OnKprobe4
+	case 5:
+		return o.objs.OnKprobe5
+	default:
+		log.Fatalf("Invalid kprobe position: %d", pos)
+	}
 	return nil
 }
 
-func (o *Bpf) Kretprobe() *ebpf.Program {
+func (o *Bpf) Kretprobe(pos int) *ebpf.Program {
 	return nil
 }
 

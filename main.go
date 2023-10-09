@@ -38,13 +38,16 @@ func main() {
 	defer stop()
 
 	if err = bpfObjs.Load(bpf.LoadOptions{
-		Filter:    config.PcapFilterExp,
-		BpfConfig: bpf.BpfConfig{SkbTrack: config.SkbTrack},
+		Filter: config.PcapFilterExp,
+		BpfConfig: bpf.BpfConfig{
+			Netns:    config.Netns,
+			SkbTrack: config.SkbTrack,
+		},
 	}); err != nil {
 		return
 	}
 
-	targets, err := target.Parse(config.Iface, config.Skbfuncs)
+	targets, err := target.Parse(config.Iface, config.Kfuncs)
 	if err != nil {
 		return
 	}

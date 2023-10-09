@@ -110,6 +110,21 @@ kprobe_pcap_filter(struct sk_buff *skb) {
 	return kprobe_pcap_filter_l2((void *)skb, (void *)skb, (void *)skb, data, data_end);
 }
 
+static __always_inline u32
+get_netns(struct sk_buff *skb) {
+	u32 netns = BPF_CORE_READ(skb, dev, nd_net.net, ns.inum);
+
+	// if skb->dev is not initialized, try to get ns from sk->__sk_common.skc_net.net->ns.inum
+	if (netns == 0)	{
+		struct sock *sk = BPF_CORE_READ(skb, sk);
+		if (sk != NULL)	{
+			netns = BPF_CORE_READ(sk, __sk_common.skc_net.net, ns.inum);
+		}
+	}
+
+	return netns;
+}
+
 static __always_inline int
 handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx) {
 	__u32 key = 0;
@@ -127,8 +142,8 @@ handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx) {
 		bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
 
 cont:
-	//if (SKBDUMP_CONFIG.netns != get_netns(skb))
-		//return 0;
+	if (SKBDUMP_CONFIG.netns != get_netns(skb))
+		return 0;
 
 	dump = bpf_map_lookup_elem(&bpf_stack, &key);
 	if (!dump)
@@ -152,7 +167,7 @@ cont:
 	BPF_CORE_READ_INTO(&dump->meta.cb[4], skb, cb[32]);
 
 	void *skb_head = BPF_CORE_READ(skb, head);
-	bpf_probe_read_kernel(&dump->payload, sizeof(dump->payload), (void *)(skb_head + off_l2_or_l3));
+	bpf_probe_read_kernel(&dump->payload, 66, (void *)(skb_head + off_l2_or_l3));
 	bpf_ringbuf_output(&data_ringbuf, dump, sizeof(*dump), 0);
 	return 0;
 }
@@ -160,7 +175,7 @@ cont:
 
 #define SKB_KPROBE(X)                                                     \
   SEC("kprobe/skb-" #X)                                             \
-  int kprobe_skb_##X(struct pt_regs *ctx) {                                    \
+  int on_kprobe##X(struct pt_regs *ctx) {                                    \
     struct sk_buff *skb = (struct sk_buff *) PT_REGS_PARM##X(ctx);             \
     return handle_skb_kprobe(skb, ctx);                  \
   }

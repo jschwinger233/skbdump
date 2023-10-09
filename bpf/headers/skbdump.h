@@ -37,7 +37,8 @@
 #ifndef SKBDUMP_CONFIG_DEFINED
 #define SKBDUMP_CONFIG_DEFINED
 struct skbdump_config {
-	bool skb_track;
+	__u32 netns;
+	__u32 skb_track;
 };
 
 static volatile const struct skbdump_config SKBDUMP_CONFIG = {};

@@ -35,7 +35,7 @@ func skbPrint(skb bpf.Skbdump, linktype layers.LinkType) {
 	case 0:
 		direction = "<"
 	default:
-		panic("not implemented")
+		direction = ksym(skb.Meta.At)
 	}
 	firstLayer := layers.LayerTypeEthernet
 	if linktype == layers.LinkTypeRaw {
