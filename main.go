@@ -120,10 +120,10 @@ func main() {
 }
 
 /*
-- k: get meta only, ns filter
 - elibpcap
 - kr
-- payload: dynamic b_r_k + dynamic ringbuf? fallback: tailcall
-- don't output pcap by default
+- output
+- payload: ~~dynamic b_r_k + dynamic ringbuf?~~ fallback: tailcall
+- output options: meta? payload? file?
 - bench
 */

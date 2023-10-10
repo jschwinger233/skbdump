@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
+	"strings"
 	"unsafe"
 
 	"github.com/cilium/ebpf"
@@ -63,11 +64,57 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 		if !ok {
 			return errors.Errorf("program %s not found", progName)
 		}
-		if prog.Instructions, err = elibpcap.Inject(opts.Filter,
+		if prog.Instructions, err = elibpcap.Inject(
+			opts.Filter,
 			prog.Instructions,
-			elibpcap.Options{AtBpf2Bpf: "tc_pcap_filter"},
+			elibpcap.Options{
+				AtBpf2Bpf:  "tc_pcap_filter",
+				DirectRead: true,
+				L2Skb:      true,
+			},
 		); err != nil {
 			return
+		}
+	}
+	for _, progName := range []string{"on_kprobe1", "on_kprobe2", "on_kprobe3", "on_kprobe4", "on_kprobe5"} {
+		prog, ok := o.spec.Programs[progName]
+		if !ok {
+			return errors.Errorf("program %s not found", progName)
+		}
+		if prog.Instructions, err = elibpcap.Inject(
+			opts.Filter,
+			prog.Instructions,
+			elibpcap.Options{
+				AtBpf2Bpf:  "kprobe_pcap_filter_l2",
+				DirectRead: false,
+				L2Skb:      true,
+			},
+		); err != nil {
+			return
+		}
+		if prog.Instructions, err = elibpcap.Inject(
+			opts.Filter,
+			prog.Instructions,
+			elibpcap.Options{
+				AtBpf2Bpf:  "kprobe_pcap_filter_l3",
+				DirectRead: false,
+				L2Skb:      false,
+			},
+		); err != nil {
+			if !strings.Contains(fmt.Sprintf("%+v", err), "expression rejects all packets") {
+				return
+			}
+			if prog.Instructions, err = elibpcap.Inject(
+				"__reject_all__",
+				prog.Instructions,
+				elibpcap.Options{
+					AtBpf2Bpf:  "kprobe_pcap_filter_l3",
+					DirectRead: false,
+					L2Skb:      false,
+				},
+			); err != nil {
+				return
+			}
 		}
 	}
 	if err = errors.WithStack(o.spec.LoadAndAssign(o.objs, &ebpf.CollectionOptions{
