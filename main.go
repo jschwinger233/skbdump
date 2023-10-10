@@ -100,7 +100,7 @@ func main() {
 			err = errors.WithStack(err)
 			return
 		}
-		skbPrint(skb, linktype)
+		skbPrint(&skb, linktype)
 		captureInfo := gopacket.CaptureInfo{
 			Timestamp:      bootTime.Add(time.Duration(skb.Meta.TimeNs)),
 			CaptureLength:  int(skb.Meta.Len),
@@ -120,6 +120,7 @@ func main() {
 }
 
 /*
+- l2/l3
 - elibpcap
 - kr
 - output

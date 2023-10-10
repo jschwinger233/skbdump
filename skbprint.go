@@ -27,26 +27,15 @@ func init() {
 	}
 }
 
-func skbPrint(skb bpf.Skbdump, linktype layers.LinkType) {
-	var direction string
+func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
+	var position string
 	switch skb.Meta.At {
 	case 1:
-		direction = ">"
+		position = ">"
 	case 0:
-		direction = "<"
+		position = "<"
 	default:
-		direction = ksym(skb.Meta.At)
-	}
-	firstLayer := layers.LayerTypeEthernet
-	if linktype == layers.LinkTypeRaw {
-		switch skb.Meta.Protocol {
-		case 0x0800:
-			firstLayer = layers.LayerTypeIPv4
-		case 0x86DD:
-			firstLayer = layers.LayerTypeIPv6
-		case 0x0806:
-			firstLayer = layers.LayerTypeARP
-		}
+		position = ksym(skb.Meta.At)
 	}
 	ifname := "unknown"
 	iface, err := net.InterfaceByIndex(int(skb.Meta.Ifindex))
@@ -55,10 +44,26 @@ func skbPrint(skb bpf.Skbdump, linktype layers.LinkType) {
 	} else {
 		ifname = iface.Name
 	}
-	fmt.Printf("%s%d:%s %016x ", direction, skb.Meta.Ifindex, ifname, skb.Meta.Skb)
+	fmt.Printf("%s:%d(%s) %016x ", position, skb.Meta.Ifindex, ifname, skb.Meta.Skb)
 	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
 
-	packet := gopacket.NewPacket(skb.Payload[:skb.Meta.Len], firstLayer, gopacket.NoCopy)
+	payload := []byte{}
+	if skb.Meta.L2 == 0 {
+		for i := 0; i < 12; i++ {
+			payload = append(payload, 0)
+		}
+		ethertype := make([]byte, 2)
+		binary.BigEndian.PutUint16(ethertype, uint16(skb.Meta.Protocol))
+		payload = append(payload, ethertype[1], ethertype[0])
+	}
+	payloadLen := 1500
+	if int(skb.Meta.Len) < payloadLen {
+		payloadLen = int(skb.Meta.Len)
+	}
+	payload = append(payload, skb.Payload[:payloadLen]...)
+	copy(skb.Payload[:], payload)
+
+	packet := gopacket.NewPacket(payload, layers.LayerTypeEthernet, gopacket.NoCopy)
 	layerNum := len(packet.Layers())
 	for idx, layer := range packet.Layers() {
 

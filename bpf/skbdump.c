@@ -55,7 +55,8 @@ cont:
 	dump->meta.data = skb->data;
 	dump->meta.len = skb->len;
 	dump->meta.protocol = skb->protocol;
-	dump->meta.pkt_type = skb->pkt_type;
+	dump->meta.pkt_type = (__u16)skb->pkt_type;
+	dump->meta.l2 = 1;
 	dump->meta.mark = skb->mark;
 	dump->meta.ifindex = skb->ifindex;
 	dump->meta.cb[0] = skb->cb[0];
@@ -154,9 +155,10 @@ cont:
 	dump->meta.skb = skb_addr;
 
 	dump->meta.data = (__u64)BPF_CORE_READ(skb, data);
-	__u16 off_l2_or_l3 = BPF_CORE_READ(skb, mac_len) ? BPF_CORE_READ(skb, mac_header) : BPF_CORE_READ(skb, network_header);
+	dump->meta.l2 = BPF_CORE_READ(skb, mac_len) ? 1 : 0;
+	__u16 off_l2_or_l3 = dump->meta.l2 ? BPF_CORE_READ(skb, mac_header) : BPF_CORE_READ(skb, network_header);
 	dump->meta.len = BPF_CORE_READ(skb, tail) - (__u32)off_l2_or_l3;
-	dump->meta.protocol = (__u32)BPF_CORE_READ_BITFIELD_PROBED(skb, pkt_type);
+	dump->meta.pkt_type = (__u16)BPF_CORE_READ_BITFIELD_PROBED(skb, pkt_type);
 	BPF_CORE_READ_INTO(&dump->meta.protocol, skb, protocol);
 	BPF_CORE_READ_INTO(&dump->meta.mark, skb, mark);
 	BPF_CORE_READ_INTO(&dump->meta.ifindex, skb, dev, ifindex);

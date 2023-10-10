@@ -20,7 +20,8 @@ type BpfSkbdump struct {
 		Data     uint64
 		Len      uint32
 		Protocol uint32
-		PktType  uint32
+		PktType  uint16
+		L2       uint16
 		Mark     uint32
 		Ifindex  uint32
 		Cb       [5]uint32

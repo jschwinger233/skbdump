@@ -9,7 +9,8 @@ struct skbmeta {
 	__u64	data;
 	__u32	len;
 	__u32	protocol;
-	__u32	pkt_type;
+	__u16	pkt_type;
+	__u16	l2;
 	__u32	mark;
 	__u32	ifindex;
 	__u32	cb[5];
