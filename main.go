@@ -121,8 +121,8 @@ func main() {
 
 /*
 - l2/l3
-- elibpcap
 - kr
+- refactor bpf code
 - output
 - payload: ~~dynamic b_r_k + dynamic ringbuf?~~ fallback: tailcall
 - output options: meta? payload? file?

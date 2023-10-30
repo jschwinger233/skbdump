@@ -62,6 +62,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	}
 	payload = append(payload, skb.Payload[:payloadLen]...)
 	copy(skb.Payload[:], payload)
+	skb.Meta.Len = uint32(payloadLen)
 
 	packet := gopacket.NewPacket(payload, layers.LayerTypeEthernet, gopacket.NoCopy)
 	layerNum := len(packet.Layers())

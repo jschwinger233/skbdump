@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/cilium/ebpf/btf"
 )
@@ -56,6 +57,30 @@ func GetPositions(spec *btf.Spec) (map[string]int, error) {
 	}
 
 	iters := []iterator{{"", spec.Iterate()}}
+
+	files, err := os.ReadDir("/sys/kernel/btf")
+	if err != nil {
+		log.Fatalf("Failed to read directory: %s", err)
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		module := file.Name()
+		path := filepath.Join("/sys/kernel/btf", module)
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open %s: %v", path, err)
+		}
+		defer f.Close()
+
+		modSpec, err := btf.LoadSplitSpecFromReader(f, spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load %s btf: %v", module, err)
+		}
+		iters = append(iters, iterator{module, modSpec.Iterate()})
+
+	}
 
 	for _, it := range iters {
 		for it.iter.Next() {

@@ -136,10 +136,10 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 }
 
 func (o *Bpf) TcIngress() *ebpf.Program {
-	return o.objs.OnEgress
+	return o.objs.OnIngress
 }
 func (o *Bpf) TcEgress() *ebpf.Program {
-	return o.objs.OnIngress
+	return o.objs.OnEgress
 }
 
 func (o *Bpf) Kprobe(pos int) *ebpf.Program {
