@@ -12,7 +12,10 @@ import (
 	"github.com/jschwinger233/skbdump/bpf"
 )
 
-var strfuncs map[string]func([]byte) string
+var (
+	indents  []string
+	strfuncs map[string]func([]byte) string
+)
 
 func init() {
 	strfuncs = map[string]func([]byte) string{
@@ -28,13 +31,25 @@ func init() {
 }
 
 func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
-	position := ksym(skb.Meta.At)
+	at := ksym(skb.Meta.At)
+	if len(at) > 1 {
+		defer func() {
+			switch at[0] {
+			case '<':
+				if len(indents) > 0 {
+					indents = indents[:len(indents)-1]
+				}
+			case '>':
+				indents = append(indents, "  ")
+			}
+		}()
+	}
 	ifname := "unknown"
 	iface, err := net.InterfaceByIndex(int(skb.Meta.Ifindex))
 	if err == nil {
 		ifname = iface.Name
 	}
-	fmt.Printf("%016x %s@%d(%s) ", skb.Meta.Skb, position, skb.Meta.Ifindex, ifname)
+	fmt.Printf("%016x %s%s@%d(%s) ", skb.Meta.Skb, strings.Join(indents, ""), at, skb.Meta.Ifindex, ifname)
 	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
 
 	payload := []byte{}
