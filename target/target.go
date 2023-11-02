@@ -20,14 +20,11 @@ func Parse(iface, skbfuncs string) (targets []Target, err error) {
 		targets = append(targets, Target(dev))
 	}
 
-	skbKfuncs, tidKfuncs, err := kfunc.GetSkbfuncs(skbfuncs)
+	kfuncs, err := kfunc.GetSkbfuncs(skbfuncs)
 	if err != nil {
 		return
 	}
-	for _, kfunc := range skbKfuncs {
-		targets = append(targets, Target(kfunc))
-	}
-	for _, kfunc := range tidKfuncs {
+	for _, kfunc := range kfuncs {
 		targets = append(targets, Target(kfunc))
 	}
 	return

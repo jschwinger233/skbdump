@@ -37,7 +37,7 @@ type Objects interface {
 	Kprobe(pos int) *ebpf.Program
 	Kretprobe() *ebpf.Program
 	KprobeTid() *ebpf.Program
-	KretprobeTid() *ebpf.Program
+	KprobeKfree() *ebpf.Program
 	PollSkb(context.Context) (<-chan Skbdump, error)
 }
 
@@ -171,8 +171,8 @@ func (o *Bpf) KprobeTid() *ebpf.Program {
 	return o.objs.OnKprobeTid
 }
 
-func (o *Bpf) KretprobeTid() *ebpf.Program {
-	return o.objs.OnKretprobeTid
+func (o *Bpf) KprobeKfree() *ebpf.Program {
+	return o.objs.OnKprobeKfreeSkbmem
 }
 
 func (o *Bpf) PollSkb(ctx context.Context) (_ <-chan Skbdump, err error) {

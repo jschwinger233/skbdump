@@ -71,17 +71,16 @@ type BpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type BpfProgramSpecs struct {
-	KprobeKfreeSkbmem *ebpf.ProgramSpec `ebpf:"kprobe_kfree_skbmem"`
-	OnEgress          *ebpf.ProgramSpec `ebpf:"on_egress"`
-	OnIngress         *ebpf.ProgramSpec `ebpf:"on_ingress"`
-	OnKprobe1         *ebpf.ProgramSpec `ebpf:"on_kprobe1"`
-	OnKprobe2         *ebpf.ProgramSpec `ebpf:"on_kprobe2"`
-	OnKprobe3         *ebpf.ProgramSpec `ebpf:"on_kprobe3"`
-	OnKprobe4         *ebpf.ProgramSpec `ebpf:"on_kprobe4"`
-	OnKprobe5         *ebpf.ProgramSpec `ebpf:"on_kprobe5"`
-	OnKprobeTid       *ebpf.ProgramSpec `ebpf:"on_kprobe_tid"`
-	OnKretprobe       *ebpf.ProgramSpec `ebpf:"on_kretprobe"`
-	OnKretprobeTid    *ebpf.ProgramSpec `ebpf:"on_kretprobe_tid"`
+	OnEgress            *ebpf.ProgramSpec `ebpf:"on_egress"`
+	OnIngress           *ebpf.ProgramSpec `ebpf:"on_ingress"`
+	OnKprobe1           *ebpf.ProgramSpec `ebpf:"on_kprobe1"`
+	OnKprobe2           *ebpf.ProgramSpec `ebpf:"on_kprobe2"`
+	OnKprobe3           *ebpf.ProgramSpec `ebpf:"on_kprobe3"`
+	OnKprobe4           *ebpf.ProgramSpec `ebpf:"on_kprobe4"`
+	OnKprobe5           *ebpf.ProgramSpec `ebpf:"on_kprobe5"`
+	OnKprobeKfreeSkbmem *ebpf.ProgramSpec `ebpf:"on_kprobe_kfree_skbmem"`
+	OnKprobeTid         *ebpf.ProgramSpec `ebpf:"on_kprobe_tid"`
+	OnKretprobe         *ebpf.ProgramSpec `ebpf:"on_kretprobe"`
 }
 
 // BpfMapSpecs contains maps before they are loaded into the kernel.
@@ -138,22 +137,20 @@ func (m *BpfMaps) Close() error {
 //
 // It can be passed to LoadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type BpfPrograms struct {
-	KprobeKfreeSkbmem *ebpf.Program `ebpf:"kprobe_kfree_skbmem"`
-	OnEgress          *ebpf.Program `ebpf:"on_egress"`
-	OnIngress         *ebpf.Program `ebpf:"on_ingress"`
-	OnKprobe1         *ebpf.Program `ebpf:"on_kprobe1"`
-	OnKprobe2         *ebpf.Program `ebpf:"on_kprobe2"`
-	OnKprobe3         *ebpf.Program `ebpf:"on_kprobe3"`
-	OnKprobe4         *ebpf.Program `ebpf:"on_kprobe4"`
-	OnKprobe5         *ebpf.Program `ebpf:"on_kprobe5"`
-	OnKprobeTid       *ebpf.Program `ebpf:"on_kprobe_tid"`
-	OnKretprobe       *ebpf.Program `ebpf:"on_kretprobe"`
-	OnKretprobeTid    *ebpf.Program `ebpf:"on_kretprobe_tid"`
+	OnEgress            *ebpf.Program `ebpf:"on_egress"`
+	OnIngress           *ebpf.Program `ebpf:"on_ingress"`
+	OnKprobe1           *ebpf.Program `ebpf:"on_kprobe1"`
+	OnKprobe2           *ebpf.Program `ebpf:"on_kprobe2"`
+	OnKprobe3           *ebpf.Program `ebpf:"on_kprobe3"`
+	OnKprobe4           *ebpf.Program `ebpf:"on_kprobe4"`
+	OnKprobe5           *ebpf.Program `ebpf:"on_kprobe5"`
+	OnKprobeKfreeSkbmem *ebpf.Program `ebpf:"on_kprobe_kfree_skbmem"`
+	OnKprobeTid         *ebpf.Program `ebpf:"on_kprobe_tid"`
+	OnKretprobe         *ebpf.Program `ebpf:"on_kretprobe"`
 }
 
 func (p *BpfPrograms) Close() error {
 	return _BpfClose(
-		p.KprobeKfreeSkbmem,
 		p.OnEgress,
 		p.OnIngress,
 		p.OnKprobe1,
@@ -161,9 +158,9 @@ func (p *BpfPrograms) Close() error {
 		p.OnKprobe3,
 		p.OnKprobe4,
 		p.OnKprobe5,
+		p.OnKprobeKfreeSkbmem,
 		p.OnKprobeTid,
 		p.OnKretprobe,
-		p.OnKretprobeTid,
 	)
 }
 

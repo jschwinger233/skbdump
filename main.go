@@ -120,9 +120,6 @@ func main() {
 }
 
 /*
-- track by tid
-- skb position by user
-- output format
-- output options: meta? payload? file?
+- funcgraph
 - l2/l3 tc
 */

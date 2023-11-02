@@ -290,30 +290,6 @@ int on_kprobe_tid(struct pt_regs *ctx)
 	return 0;
 }
 
-SEC("kretprobe/skb-tid")
-int on_kretprobe_tid(struct pt_regs *ctx)
-{
-	__u64 sp = ctx->sp - 8;
-	__u64 *ip = (__u64 *)bpf_map_lookup_elem(&sp2ip, &sp);
-	if (!ip)
-		return 0;
-
-	__u32 tid = bpf_get_current_pid_tgid() & 0xffffffff;
-	struct sk_buff **skb = (struct sk_buff **)bpf_map_lookup_elem(&tid2skb, &tid);
-	if (!skb)
-		return 0;
-
-	struct skbdump *dump = (struct skbdump *)bpf_map_lookup_elem(&bpf_stack, &KEY);
-	if (!dump)
-		return 0;
-
-	dump->meta.at = (*ip) - 1;
-	collect_skb(*skb, ctx, dump);
-
-	bpf_map_delete_elem(&sp2ip, &sp);
-	return 0;
-}
-
 SEC("kretprobe/skb")
 int on_kretprobe(struct pt_regs *ctx)
 {
@@ -345,7 +321,7 @@ int on_kretprobe(struct pt_regs *ctx)
 }
 
 SEC("kprobe/kfree_skbmem")
-int kprobe_kfree_skbmem(struct pt_regs *ctx)
+int on_kprobe_kfree_skbmem(struct pt_regs *ctx)
 {
 	__u64 skb_addr = (__u64)PT_REGS_PARM1(ctx);
 	if (SKBDUMP_CONFIG.skb_track)
