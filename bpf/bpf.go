@@ -36,6 +36,8 @@ type Objects interface {
 	TcEgress() *ebpf.Program
 	Kprobe(pos int) *ebpf.Program
 	Kretprobe() *ebpf.Program
+	KprobeTid() *ebpf.Program
+	KretprobeTid() *ebpf.Program
 	PollSkb(context.Context) (<-chan Skbdump, error)
 }
 
@@ -165,12 +167,20 @@ func (o *Bpf) Kretprobe() *ebpf.Program {
 	return o.objs.OnKretprobe
 }
 
+func (o *Bpf) KprobeTid() *ebpf.Program {
+	return o.objs.OnKprobeTid
+}
+
+func (o *Bpf) KretprobeTid() *ebpf.Program {
+	return o.objs.OnKretprobeTid
+}
+
 func (o *Bpf) PollSkb(ctx context.Context) (_ <-chan Skbdump, err error) {
 	ch := make(chan Skbdump)
 	go func() {
 		defer close(ch)
 
-		dataReader, err := perf.NewReader(o.objs.PerfOutput, 1500*100)
+		dataReader, err := perf.NewReader(o.objs.PerfOutput, 1500*1000)
 		if err != nil {
 			log.Printf("Failed to open perf: %+v", err)
 		}

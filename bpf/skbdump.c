@@ -69,6 +69,13 @@ struct bpf_map_def SEC("maps") tid2skb = {
 	.max_entries = MAX_TRACK_SIZE,
 };
 
+struct bpf_map_def SEC("maps") tid2sp = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(__u32),
+	.value_size = sizeof(__u64),
+	.max_entries = MAX_TRACK_SIZE,
+};
+
 struct bpf_map_def SEC("maps") sp2ip = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u64),
@@ -158,7 +165,8 @@ kprobe_pcap_filter_l2(void *_skb, void *__skb, void *___skb, void *data, void* d
 }
 
 static __always_inline bool
-kprobe_pcap_filter(struct sk_buff *skb) {
+kprobe_pcap_filter(struct sk_buff *skb)
+{
 	if (BPF_CORE_READ(skb, mac_len) == 0) {
 		void *skb_head = BPF_CORE_READ(skb, head);
 		void *data = skb_head + BPF_CORE_READ(skb, network_header);
@@ -176,7 +184,6 @@ static __always_inline u32
 get_netns(struct sk_buff *skb) {
 	u32 netns = BPF_CORE_READ(skb, dev, nd_net.net, ns.inum);
 
-	// if skb->dev is not initialized, try to get ns from sk->__sk_common.skc_net.net->ns.inum
 	if (netns == 0)	{
 		struct sock *sk = BPF_CORE_READ(skb, sk);
 		if (sk != NULL)	{
@@ -216,14 +223,12 @@ collect_skb(struct sk_buff *skb, struct pt_regs *ctx, struct skbdump *dump)
 
 
 static __always_inline int
-handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx) {
+handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx)
+{
 	__u32 tid;
-	__u64 skb_addr = (__u64)(void *)skb;
+	__u64 skb_addr = (__u64)skb;
 	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_addresses, &skb_addr))
 		goto cont;
-
-	if (SKBDUMP_CONFIG.netns != get_netns(skb))
-		return 0;
 
 	if (!kprobe_pcap_filter(skb))
 		return 0;
@@ -232,8 +237,15 @@ handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx) {
 		bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
 
 cont:
+	if (SKBDUMP_CONFIG.netns != get_netns(skb))
+		return 0;
+
 	tid = bpf_get_current_pid_tgid() & 0xffffffff;
-	bpf_map_update_elem(&tid2skb, &tid, &skb, BPF_ANY);
+	if (!bpf_map_lookup_elem(&tid2skb, &tid)) {
+		bpf_map_update_elem(&tid2skb, &tid, &skb, BPF_ANY);
+		__u64 sp = ctx->sp;
+		bpf_map_update_elem(&tid2sp, &tid, &sp, BPF_ANY);
+	}
 
 	struct skbdump *dump = (struct skbdump *)bpf_map_lookup_elem(&bpf_stack, &KEY);
 	if (!dump)
@@ -248,7 +260,8 @@ cont:
 
 #define SKB_KPROBE(X)                                                     \
   SEC("kprobe/skb-" #X)                                             \
-  int on_kprobe##X(struct pt_regs *ctx) {                                    \
+  int on_kprobe##X(struct pt_regs *ctx) \
+  {                                    \
     struct sk_buff *skb = (struct sk_buff *) PT_REGS_PARM##X(ctx);             \
     return handle_skb_kprobe(skb, ctx);                  \
   }
@@ -259,30 +272,81 @@ SKB_KPROBE(3)
 SKB_KPROBE(4)
 SKB_KPROBE(5)
 
-SEC("kretprobe/skb")
-int on_kretprobe(struct pt_regs *ctx) {
+SEC("kprobe/skb-tid")
+int on_kprobe_tid(struct pt_regs *ctx)
+{
 	__u32 tid = bpf_get_current_pid_tgid() & 0xffffffff;
 	struct sk_buff **skb = (struct sk_buff **)bpf_map_lookup_elem(&tid2skb, &tid);
 	if (skb) {
-		bpf_map_delete_elem(&tid2skb, &tid);
-
 		struct skbdump *dump = (struct skbdump *)bpf_map_lookup_elem(&bpf_stack, &KEY);
 		if (!dump)
 			return 0;
 
-		__u64 sp = ctx->sp - 8;
-		__u64 *ip = (__u64 *)bpf_map_lookup_elem(&sp2ip, &sp);
-		if (ip) {
-			dump->meta.at = (*ip) - 1;
-			bpf_map_delete_elem(&sp2ip, &sp);
-		}
-		return collect_skb(*skb, ctx, dump);
+		dump->meta.at = ctx->ip - 1;
+		__u64 sp = ctx->sp;
+		bpf_map_update_elem(&sp2ip, &sp, &dump->meta.at, BPF_ANY);
+		collect_skb(*skb, ctx, dump);
+	}
+	return 0;
+}
+
+SEC("kretprobe/skb-tid")
+int on_kretprobe_tid(struct pt_regs *ctx)
+{
+	__u64 sp = ctx->sp - 8;
+	__u64 *ip = (__u64 *)bpf_map_lookup_elem(&sp2ip, &sp);
+	if (!ip)
+		return 0;
+
+	__u32 tid = bpf_get_current_pid_tgid() & 0xffffffff;
+	struct sk_buff **skb = (struct sk_buff **)bpf_map_lookup_elem(&tid2skb, &tid);
+	if (!skb)
+		return 0;
+
+	struct skbdump *dump = (struct skbdump *)bpf_map_lookup_elem(&bpf_stack, &KEY);
+	if (!dump)
+		return 0;
+
+	dump->meta.at = (*ip) - 1;
+	collect_skb(*skb, ctx, dump);
+
+	bpf_map_delete_elem(&sp2ip, &sp);
+	return 0;
+}
+
+SEC("kretprobe/skb")
+int on_kretprobe(struct pt_regs *ctx)
+{
+	__u64 sp = ctx->sp - 8;
+	__u64 *ip = (__u64 *)bpf_map_lookup_elem(&sp2ip, &sp);
+	if (!ip)
+		return 0;
+
+	__u32 tid = bpf_get_current_pid_tgid() & 0xffffffff;
+	struct sk_buff **skb = (struct sk_buff **)bpf_map_lookup_elem(&tid2skb, &tid);
+	if (!skb)
+		return 0;
+
+	struct skbdump *dump = (struct skbdump *)bpf_map_lookup_elem(&bpf_stack, &KEY);
+	if (!dump)
+		return 0;
+
+	dump->meta.at = (*ip) - 1;
+	collect_skb(*skb, ctx, dump);
+
+	bpf_map_delete_elem(&sp2ip, &sp);
+
+	__u64 *creator_sp = (__u64 *)bpf_map_lookup_elem(&tid2sp, &tid);
+	if (creator_sp && *creator_sp == sp) {
+		bpf_map_delete_elem(&tid2sp, &tid);
+		bpf_map_delete_elem(&tid2skb, &tid);
 	}
 	return 0;
 }
 
 SEC("kprobe/kfree_skbmem")
-int kprobe_kfree_skbmem(struct pt_regs *ctx) {
+int kprobe_kfree_skbmem(struct pt_regs *ctx)
+{
 	__u64 skb_addr = (__u64)PT_REGS_PARM1(ctx);
 	if (SKBDUMP_CONFIG.skb_track)
 		bpf_map_delete_elem(&skb_addresses, &skb_addr);

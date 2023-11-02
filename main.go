@@ -120,12 +120,9 @@ func main() {
 }
 
 /*
-- kr
-- refactor bpf code
 - track by tid
 - skb position by user
 - output format
 - output options: meta? payload? file?
 - l2/l3 tc
-- bench
 */

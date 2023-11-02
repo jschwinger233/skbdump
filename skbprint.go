@@ -31,9 +31,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	position := ksym(skb.Meta.At)
 	ifname := "unknown"
 	iface, err := net.InterfaceByIndex(int(skb.Meta.Ifindex))
-	if err != nil {
-		fmt.Printf("failed to convert ifindex to ifname: %+v\n", err)
-	} else {
+	if err == nil {
 		ifname = iface.Name
 	}
 	fmt.Printf("%016x %s@%d(%s) ", skb.Meta.Skb, position, skb.Meta.Ifindex, ifname)
