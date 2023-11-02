@@ -11,7 +11,7 @@ import (
 type Kfunc struct {
 	Fname string
 
-	kp link.Link
+	kp, krp link.Link
 }
 
 func GetSkbfuncs(kfnames string) (kfuncs []*Kfunc, err error) {
@@ -29,12 +29,15 @@ func (kf *Kfunc) Attach(objs bpf.Objects) (err error) {
 	if !ok {
 		return errors.Errorf("invalid kfunc: %s", kf.Fname)
 	}
-	prog := objs.Kprobe(pos)
-	kf.kp, err = link.Kprobe(kf.Fname, prog, nil)
+	if kf.kp, err = link.Kprobe(kf.Fname, objs.Kprobe(pos), nil); err != nil {
+		return
+	}
+	kf.krp, err = link.Kretprobe(kf.Fname, objs.Kretprobe(), nil)
 	return err
 }
 
 func (kf *Kfunc) Detach() error {
 	kf.kp.Close()
+	kf.krp.Close()
 	return nil
 }

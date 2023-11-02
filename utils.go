@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -23,8 +24,11 @@ func init() {
 		if err != nil {
 			continue
 		}
-		kallsymsByAddr[addr] = parts[2]
+		kallsymsByAddr[addr] = fmt.Sprintf(">%s", parts[2])
+		kallsymsByAddr[addr-1] = fmt.Sprintf("<%s", parts[2])
 	}
+	kallsymsByAddr[0] = "<"
+	kallsymsByAddr[1] = ">"
 }
 
 func ksym(addr uint64) string {

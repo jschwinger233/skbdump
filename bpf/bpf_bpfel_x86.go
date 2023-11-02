@@ -79,6 +79,7 @@ type BpfProgramSpecs struct {
 	OnKprobe3         *ebpf.ProgramSpec `ebpf:"on_kprobe3"`
 	OnKprobe4         *ebpf.ProgramSpec `ebpf:"on_kprobe4"`
 	OnKprobe5         *ebpf.ProgramSpec `ebpf:"on_kprobe5"`
+	OnKretprobe       *ebpf.ProgramSpec `ebpf:"on_kretprobe"`
 }
 
 // BpfMapSpecs contains maps before they are loaded into the kernel.
@@ -88,6 +89,8 @@ type BpfMapSpecs struct {
 	BpfStack     *ebpf.MapSpec `ebpf:"bpf_stack"`
 	PerfOutput   *ebpf.MapSpec `ebpf:"perf_output"`
 	SkbAddresses *ebpf.MapSpec `ebpf:"skb_addresses"`
+	Sp2ip        *ebpf.MapSpec `ebpf:"sp2ip"`
+	Tid2skb      *ebpf.MapSpec `ebpf:"tid2skb"`
 }
 
 // BpfObjects contains all objects after they have been loaded into the kernel.
@@ -112,6 +115,8 @@ type BpfMaps struct {
 	BpfStack     *ebpf.Map `ebpf:"bpf_stack"`
 	PerfOutput   *ebpf.Map `ebpf:"perf_output"`
 	SkbAddresses *ebpf.Map `ebpf:"skb_addresses"`
+	Sp2ip        *ebpf.Map `ebpf:"sp2ip"`
+	Tid2skb      *ebpf.Map `ebpf:"tid2skb"`
 }
 
 func (m *BpfMaps) Close() error {
@@ -119,6 +124,8 @@ func (m *BpfMaps) Close() error {
 		m.BpfStack,
 		m.PerfOutput,
 		m.SkbAddresses,
+		m.Sp2ip,
+		m.Tid2skb,
 	)
 }
 
@@ -134,6 +141,7 @@ type BpfPrograms struct {
 	OnKprobe3         *ebpf.Program `ebpf:"on_kprobe3"`
 	OnKprobe4         *ebpf.Program `ebpf:"on_kprobe4"`
 	OnKprobe5         *ebpf.Program `ebpf:"on_kprobe5"`
+	OnKretprobe       *ebpf.Program `ebpf:"on_kretprobe"`
 }
 
 func (p *BpfPrograms) Close() error {
@@ -146,6 +154,7 @@ func (p *BpfPrograms) Close() error {
 		p.OnKprobe3,
 		p.OnKprobe4,
 		p.OnKprobe5,
+		p.OnKretprobe,
 	)
 }
 

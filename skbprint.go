@@ -28,15 +28,7 @@ func init() {
 }
 
 func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
-	var position string
-	switch skb.Meta.At {
-	case 1:
-		position = ">"
-	case 0:
-		position = "<"
-	default:
-		position = ksym(skb.Meta.At)
-	}
+	position := ksym(skb.Meta.At)
 	ifname := "unknown"
 	iface, err := net.InterfaceByIndex(int(skb.Meta.Ifindex))
 	if err != nil {
@@ -44,7 +36,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	} else {
 		ifname = iface.Name
 	}
-	fmt.Printf("%s:%d(%s) %016x ", position, skb.Meta.Ifindex, ifname, skb.Meta.Skb)
+	fmt.Printf("%016x %s@%d(%s) ", skb.Meta.Skb, position, skb.Meta.Ifindex, ifname)
 	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
 
 	payload := []byte{}
@@ -159,7 +151,7 @@ func stringifyTCP(data []byte) string {
 	}
 	seq := binary.BigEndian.Uint32(data[4:8])
 	ack := binary.BigEndian.Uint32(data[8:12])
-	return fmt.Sprintf("%d>%d[%s]seq:%d,ack=%d", sport, dport, strings.Join(flags, ""), seq%10000, ack%10000)
+	return fmt.Sprintf("%d>%d[%s]seq:%d,ack:%d", sport, dport, strings.Join(flags, ""), seq%10000, ack%10000)
 }
 
 func stringifyESP(data []byte) string {

@@ -35,7 +35,7 @@ type Objects interface {
 	TcIngress() *ebpf.Program
 	TcEgress() *ebpf.Program
 	Kprobe(pos int) *ebpf.Program
-	Kretprobe(pos int) *ebpf.Program
+	Kretprobe() *ebpf.Program
 	PollSkb(context.Context) (<-chan Skbdump, error)
 }
 
@@ -161,8 +161,8 @@ func (o *Bpf) Kprobe(pos int) *ebpf.Program {
 	return nil
 }
 
-func (o *Bpf) Kretprobe(pos int) *ebpf.Program {
-	return nil
+func (o *Bpf) Kretprobe() *ebpf.Program {
+	return o.objs.OnKretprobe
 }
 
 func (o *Bpf) PollSkb(ctx context.Context) (_ <-chan Skbdump, err error) {
