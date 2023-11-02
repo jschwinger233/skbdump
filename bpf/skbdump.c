@@ -5,18 +5,64 @@
 #include "bpf_core_read.h"
 #include "bpf_tracing.h"
 
-#include "skbdump.h"
-#include "skb_payload.h"
+#define TC_ACT_OK 0
+
+#define MAX_DATA_SIZE 1500
+
+#define MAX_TRACK_SIZE 1000
+
+#define __maybe_unused		__attribute__((__unused__))
+
+struct skbdump_config {
+	__u32 netns;
+	__u32 skb_track;
+};
+
+static volatile const struct skbdump_config SKBDUMP_CONFIG = {};
 
 const static bool TRUE = true;
 
 char __license[] SEC("license") = "Dual MIT/GPL";
+
+struct skbmeta {
+	__u64	at;
+	__u64	skb;
+	__u64	time_ns;
+
+	__u64	data;
+	__u32	len;
+	__u32	protocol;
+	__u16	pkt_type;
+	__u16	l2;
+	__u32	mark;
+	__u32	ifindex;
+	__u32	cb[5];
+};
+
+struct skbdump {
+	struct	skbmeta	meta;
+	__u8	payload[MAX_DATA_SIZE];
+};
+
+// force emitting struct into the ELF.
+const struct skbdump *__ __attribute__((unused));
+
+struct bpf_map_def SEC("maps") bpf_stack = {
+	.type = BPF_MAP_TYPE_PERCPU_ARRAY,
+	.key_size = sizeof(__u32),
+	.value_size = sizeof(struct skbdump),
+	.max_entries = 1,
+};
 
 struct bpf_map_def SEC("maps") skb_addresses = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u64),
 	.value_size = sizeof(bool),
 	.max_entries = MAX_TRACK_SIZE,
+};
+
+struct bpf_map_def SEC("maps") perf_output = {
+	.type = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
 };
 
 static __noinline
@@ -66,8 +112,9 @@ cont:
 	dump->meta.cb[4] = skb->cb[4];
 
 	bpf_skb_pull_data(skb, skb->len);
-	bpf_tail_call(skb, &skb_payload_call,
-		      skb->len > MAX_DATA_SIZE ? MAX_DATA_SIZE : skb->len);
+	__u64 dumplen = dump->meta.len > MAX_DATA_SIZE ? MAX_DATA_SIZE : dump->meta.len;
+	bpf_perf_event_output(skb, &perf_output, BPF_F_CURRENT_CPU | (dumplen<<32),
+			      dump, sizeof(dump->meta));
 }
 
 SEC("tc")
@@ -169,8 +216,9 @@ cont:
 	BPF_CORE_READ_INTO(&dump->meta.cb[4], skb, cb[32]);
 
 	void *skb_head = BPF_CORE_READ(skb, head);
-	bpf_probe_read_kernel(&dump->payload, 66, (void *)(skb_head + off_l2_or_l3));
-	bpf_ringbuf_output(&data_ringbuf, dump, sizeof(*dump), 0);
+	__u64 dumplen = dump->meta.len > MAX_DATA_SIZE ? MAX_DATA_SIZE : dump->meta.len;
+	bpf_probe_read_kernel(&dump->payload, dumplen, (void *)(skb_head + off_l2_or_l3));
+	bpf_perf_event_output(ctx, &perf_output, BPF_F_CURRENT_CPU, dump, sizeof(dump->meta) + dumplen);
 	return 0;
 }
 

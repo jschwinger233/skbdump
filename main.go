@@ -120,11 +120,12 @@ func main() {
 }
 
 /*
-- l2/l3
 - kr
 - refactor bpf code
-- output
-- payload: ~~dynamic b_r_k + dynamic ringbuf?~~ fallback: tailcall
+- track by tid
+- skb position by user
+- output format
 - output options: meta? payload? file?
+- l2/l3 tc
 - bench
 */

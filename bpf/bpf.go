@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/cilium/ebpf"
+	"github.com/cilium/ebpf/perf"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/jschwinger233/elibpcap"
 	"github.com/pkg/errors"
@@ -169,9 +170,9 @@ func (o *Bpf) PollSkb(ctx context.Context) (_ <-chan Skbdump, err error) {
 	go func() {
 		defer close(ch)
 
-		dataReader, err := ringbuf.NewReader(o.objs.DataRingbuf)
+		dataReader, err := perf.NewReader(o.objs.PerfOutput, 1500*100)
 		if err != nil {
-			log.Printf("Failed to open ringbuf: %+v", err)
+			log.Printf("Failed to open perf: %+v", err)
 		}
 		defer dataReader.Close()
 
