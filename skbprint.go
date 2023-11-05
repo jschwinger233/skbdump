@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	idx      int
 	indents  []string
 	strfuncs map[string]func([]byte) string
 )
@@ -49,7 +50,8 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	if err == nil {
 		ifname = iface.Name
 	}
-	fmt.Printf("%016x %s%s@%d(%s) ", skb.Meta.Skb, strings.Join(indents, ""), at, skb.Meta.Ifindex, ifname)
+	idx++
+	fmt.Printf("%d %016x %s%s@%d(%s) ", idx, skb.Meta.Skb, strings.Join(indents, ""), at, skb.Meta.Ifindex, ifname)
 	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
 
 	payload := []byte{}
