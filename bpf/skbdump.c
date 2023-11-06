@@ -29,6 +29,7 @@ struct skbmeta {
 	__u64	at;
 	__u64	skb;
 	__u64	time_ns;
+	__u64   retval;
 
 	__u64	data;
 	__u32	len;
@@ -308,6 +309,7 @@ int on_kretprobe(struct pt_regs *ctx)
 		return 0;
 
 	dump->meta.at = (*ip) - 1;
+	dump->meta.retval = ctx->ax;
 	collect_skb(*skb, ctx, dump);
 
 	bpf_map_delete_elem(&sp2ip, &sp);

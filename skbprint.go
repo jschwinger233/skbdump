@@ -48,7 +48,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 			if len(indents) > 0 {
 				indents = indents[:len(indents)-1]
 			}
-			fmt.Printf("%s} ", strings.Join(indents, ""))
+			fmt.Printf("%s}=%x ", strings.Join(indents, ""), skb.Meta.Retval)
 		case '>':
 			defer func() {
 				indents = append(indents, "  ")

@@ -17,6 +17,7 @@ type BpfSkbdump struct {
 		At       uint64
 		Skb      uint64
 		TimeNs   uint64
+		Retval   uint64
 		Data     uint64
 		Len      uint32
 		Protocol uint32
