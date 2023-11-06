@@ -32,27 +32,34 @@ func init() {
 }
 
 func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
-	at := ksym(skb.Meta.At)
-	if len(at) > 1 {
-		defer func() {
-			switch at[0] {
-			case '<':
-				if len(indents) > 0 {
-					indents = indents[:len(indents)-1]
-				}
-			case '>':
-				indents = append(indents, "  ")
-			}
-		}()
-	}
+	idx++
+	fmt.Printf("%d %016x ", idx, skb.Meta.Skb)
+
 	ifname := "unknown"
 	iface, err := net.InterfaceByIndex(int(skb.Meta.Ifindex))
 	if err == nil {
 		ifname = iface.Name
 	}
-	idx++
-	fmt.Printf("%d %016x %s%s@%d(%s) ", idx, skb.Meta.Skb, strings.Join(indents, ""), at, skb.Meta.Ifindex, ifname)
-	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
+
+	at := ksym(skb.Meta.At)
+	if len(at) > 1 {
+		switch at[0] {
+		case '<':
+			if len(indents) > 0 {
+				indents = indents[:len(indents)-1]
+			}
+			fmt.Printf("%s} ", strings.Join(indents, ""))
+		case '>':
+			defer func() {
+				indents = append(indents, "  ")
+			}()
+			fmt.Printf("%s%s@%d(%s) { ", strings.Join(indents, ""), at[1:], skb.Meta.Ifindex, ifname)
+		}
+	} else {
+		fmt.Printf("%s%s%d(%s) ", strings.Join(indents, ""), at, skb.Meta.Ifindex, ifname)
+	}
+
+	fmt.Printf("mark=%x cb=%x", skb.Meta.Mark, skb.Meta.Cb)
 
 	payload := []byte{}
 	if skb.Meta.L2 == 0 {
