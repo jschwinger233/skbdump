@@ -120,7 +120,9 @@ func main() {
 }
 
 /*
-- graph
-- retval
+- payload format: TCP(a=1,b=2)
+- default: no meta
+- -v: selected meta
+- -vv: skb struct output
 - l2/l3 tc
 */

@@ -14,7 +14,6 @@ import (
 
 var (
 	idx      int
-	indents  []string
 	strfuncs map[string]func([]byte) string
 )
 
@@ -44,22 +43,16 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	at := ksym(skb.Meta.At)
 	if len(at) > 1 {
 		switch at[0] {
-		case '<':
-			if len(indents) > 0 {
-				indents = indents[:len(indents)-1]
-			}
-			fmt.Printf("%s}=%x ", strings.Join(indents, ""), skb.Meta.Retval)
 		case '>':
-			defer func() {
-				indents = append(indents, "  ")
-			}()
-			fmt.Printf("%s%s@%d(%s) { ", strings.Join(indents, ""), at[1:], skb.Meta.Ifindex, ifname)
+			fmt.Printf("%s@%d(%s) { ", at[1:], skb.Meta.Ifindex, ifname)
+		case '<':
+			fmt.Printf("}=%x ", skb.Meta.Retval)
 		}
 	} else {
-		fmt.Printf("%s%s%d(%s) ", strings.Join(indents, ""), at, skb.Meta.Ifindex, ifname)
+		fmt.Printf("%s%d(%s) ", at, skb.Meta.Ifindex, ifname)
 	}
 
-	fmt.Printf("mark=%x cb=%x", skb.Meta.Mark, skb.Meta.Cb)
+	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
 
 	payload := []byte{}
 	if skb.Meta.L2 == 0 {
@@ -85,7 +78,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 		layerType := layer.LayerType().String()
 		strfunc, ok := strfuncs[layerType]
 		if ok {
-			fmt.Printf("%s=%s", layerType, strfunc(layer.LayerContents()))
+			fmt.Printf("%s(%s)", layerType, strfunc(layer.LayerContents()))
 		} else {
 			fmt.Printf("%s", layerType)
 		}
@@ -173,13 +166,13 @@ func stringifyTCP(data []byte) string {
 	}
 	seq := binary.BigEndian.Uint32(data[4:8])
 	ack := binary.BigEndian.Uint32(data[8:12])
-	return fmt.Sprintf("%d>%d[%s]seq:%d,ack:%d", sport, dport, strings.Join(flags, ""), seq%10000, ack%10000)
+	return fmt.Sprintf("%d>%d,flags=%s,seq=%d,ack=%d", sport, dport, strings.Join(flags, ""), seq%10000, ack%10000)
 }
 
 func stringifyESP(data []byte) string {
 	spi := binary.BigEndian.Uint32(data[:4])
 	seq := binary.BigEndian.Uint32(data[4:8])
-	return fmt.Sprintf("spi:%d,seq:%d", spi, seq)
+	return fmt.Sprintf("spi=%d,seq=%d", spi, seq)
 }
 
 func stringifyPayload(data []byte) string {
