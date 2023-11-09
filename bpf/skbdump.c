@@ -15,7 +15,6 @@
 
 struct skbdump_config {
 	__u32 netns;
-	__u32 skb_track;
 };
 
 static volatile const struct skbdump_config SKBDUMP_CONFIG = {};
@@ -97,16 +96,14 @@ void handle_skb_tc(struct __sk_buff *skb, bool ingress)
 	struct skbdump *dump;
 
 	__u64 skb_addr = (__u64)(void *)skb;
-	if (SKBDUMP_CONFIG.skb_track)
-		if (bpf_map_lookup_elem(&skb_addresses, &skb_addr))
+	if (bpf_map_lookup_elem(&skb_addresses, &skb_addr))
 			goto cont;
 
 	if (!tc_pcap_filter((void *)skb, (void *)skb, (void *)skb,
 			 (void *)(long)skb->data, (void *)(long)skb->data_end))
 		return;
 
-	if (SKBDUMP_CONFIG.skb_track)
-		bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
+	bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
 
 cont:
 	dump = bpf_map_lookup_elem(&bpf_stack, &KEY);
@@ -221,14 +218,13 @@ handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx)
 {
 	__u32 tid;
 	__u64 skb_addr = (__u64)skb;
-	if (SKBDUMP_CONFIG.skb_track && bpf_map_lookup_elem(&skb_addresses, &skb_addr))
+	if (bpf_map_lookup_elem(&skb_addresses, &skb_addr))
 		goto cont;
 
 	if (!kprobe_pcap_filter(skb))
 		return 0;
 
-	if (SKBDUMP_CONFIG.skb_track)
-		bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
+	bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
 
 cont:
 	if (SKBDUMP_CONFIG.netns != get_netns(skb))
@@ -319,7 +315,6 @@ SEC("kprobe/kfree_skbmem")
 int on_kprobe_kfree_skbmem(struct pt_regs *ctx)
 {
 	__u64 skb_addr = (__u64)PT_REGS_PARM1(ctx);
-	if (SKBDUMP_CONFIG.skb_track)
-		bpf_map_delete_elem(&skb_addresses, &skb_addr);
+	bpf_map_delete_elem(&skb_addresses, &skb_addr);
 	return 0;
 }

@@ -40,8 +40,7 @@ func main() {
 	if err = bpfObjs.Load(bpf.LoadOptions{
 		Filter: config.PcapFilterExp,
 		BpfConfig: bpf.BpfConfig{
-			Netns:    config.Netns,
-			SkbTrack: config.SkbTrack,
+			Netns: config.Netns,
 		},
 	}); err != nil {
 		return
@@ -125,4 +124,3 @@ func main() {
 - -vv: skb struct output
 - l2/l3 tc
 */
-

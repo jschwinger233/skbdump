@@ -13,7 +13,6 @@ import (
 type Config struct {
 	Iface         string
 	Kfuncs        string
-	SkbTrack      uint32
 	SkbFilename   string
 	PcapFilename  string
 	PcapFilterExp string
@@ -31,12 +30,7 @@ func mustInitConfig() {
 	flag.StringVarP(&config.Kfuncs, "kfuncs", "k", "", "skb kfuncs to trace, e.g. \"ip_rcv,tcp_rcv\"")
 	flag.StringVarP(&config.SkbFilename, "skb-filename", "s", "skbdump.meta", "output skb filename")
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
-	skbTrack := false
-	flag.BoolVarP(&skbTrack, "skb-track", "t", false, "track skb by address")
 	flag.Parse()
-	if skbTrack {
-		config.SkbTrack = 1
-	}
 	config.PcapFilterExp = strings.Join(flag.Args(), " ")
 
 	ns, err := netns.Get()

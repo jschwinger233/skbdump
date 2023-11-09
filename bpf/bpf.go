@@ -48,8 +48,7 @@ type LoadOptions struct {
 }
 
 type BpfConfig struct {
-	Netns    uint32
-	SkbTrack uint32
+	Netns uint32
 }
 
 type Objects interface {
