@@ -20,7 +20,7 @@ import (
 
 type Skbdump = BpfSkbdump
 
-func (d *Skbdump) FindField(f string) string {
+func (d *Skbdump) Field(f string) string {
 	idx := bytes.Index(d.Meta.Structure[:], []byte(fmt.Sprintf(".%s = ", f)))
 	if idx == -1 {
 		return ""
@@ -28,7 +28,11 @@ func (d *Skbdump) FindField(f string) string {
 	nested := false
 	for i := idx + len(f) + 4; i < len(d.Meta.Structure); i++ {
 		if d.Meta.Structure[i] == ',' && !nested {
-			return string(d.Meta.Structure[idx+len(f)+4 : i])
+			value := string(d.Meta.Structure[idx+len(f)+4 : i])
+			if strings.HasPrefix(value, "(") {
+				value = value[strings.Index(value, ")")+1:]
+			}
+			return value
 		}
 		switch d.Meta.Structure[i] {
 		case '{', '[', '(':

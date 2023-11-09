@@ -13,6 +13,7 @@ import (
 type Config struct {
 	Iface         string
 	Kfuncs        string
+	OutputFields  []string
 	SkbFilename   string
 	PcapFilename  string
 	PcapFilterExp string
@@ -28,9 +29,14 @@ var (
 func mustInitConfig() {
 	flag.StringVarP(&config.Iface, "interface", "i", "lo", "interface to capture")
 	flag.StringVarP(&config.Kfuncs, "kfuncs", "k", "", "skb kfuncs to trace, e.g. \"ip_rcv,tcp_rcv\"")
+	var outputFields string
+	flag.StringVarP(&outputFields, "output-fields", "o", "", "output fields, e.g. mark,cb")
 	flag.StringVarP(&config.SkbFilename, "skb-filename", "s", "skbdump.meta", "output skb filename")
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
 	flag.Parse()
+	if outputFields != "" {
+		config.OutputFields = strings.Split(outputFields, ",")
+	}
 	config.PcapFilterExp = strings.Join(flag.Args(), " ")
 
 	ns, err := netns.Get()

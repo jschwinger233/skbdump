@@ -45,15 +45,17 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	if len(at) > 1 {
 		switch at[0] {
 		case '>':
-			fmt.Printf("%s@%d(%s) { ", at[1:], skb.Meta.Ifindex, ifname)
+			fmt.Printf("%s@%d(%s) {", at[1:], skb.Meta.Ifindex, ifname)
 		case '<':
-			fmt.Printf("}=%x ", skb.Meta.Retval)
+			fmt.Printf("%s@%d(%s) }=%x ", at[1:], skb.Meta.Ifindex, ifname, skb.Meta.Retval)
 		}
 	} else {
 		fmt.Printf("%s%d(%s) ", at, skb.Meta.Ifindex, ifname)
 	}
 
-	fmt.Printf("mark=%s cb=%s ", skb.FindField("mark"), skb.FindField("cb"))
+	for _, outputField := range config.OutputFields {
+		fmt.Printf("%s=%s ", outputField, skb.Field(outputField))
+	}
 
 	payload := []byte{}
 	if skb.Meta.L2 == 0 {
@@ -61,11 +63,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 			payload = append(payload, 0)
 		}
 		ethertype := make([]byte, 2)
-		protocol := skb.FindField("protocol")
-		if strings.HasPrefix(protocol, "(") {
-			protocol = protocol[strings.Index(protocol, ")")+1:]
-		}
-		proto, err := strconv.ParseUint(protocol, 10, 16)
+		proto, err := strconv.ParseUint(skb.Field("protocol"), 10, 16)
 		if err != nil {
 			proto = 0
 		}
