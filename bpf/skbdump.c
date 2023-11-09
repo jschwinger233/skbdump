@@ -7,8 +7,8 @@
 
 #define TC_ACT_OK 0
 
-#define MAX_DATA_SIZE 1500
-
+#define MAX_STRUCT_SIZE 4096
+#define MAX_PAYLOAD_SIZE 1500
 #define MAX_TRACK_SIZE 1000
 
 #define __maybe_unused		__attribute__((__unused__))
@@ -31,19 +31,16 @@ struct skbmeta {
 	__u64	time_ns;
 	__u64   retval;
 
-	__u64	data;
-	__u32	len;
-	__u32	protocol;
-	__u16	pkt_type;
 	__u16	l2;
-	__u32	mark;
+	__u32	len;
 	__u32	ifindex;
-	__u32	cb[5];
+
+	__u8    structure[MAX_STRUCT_SIZE];
 };
 
 struct skbdump {
 	struct	skbmeta	meta;
-	__u8	payload[MAX_DATA_SIZE];
+	__u8	payload[MAX_PAYLOAD_SIZE];
 };
 
 // force emitting struct into the ELF.
@@ -120,23 +117,21 @@ cont:
 	dump->meta.time_ns = bpf_ktime_get_boot_ns();
 	dump->meta.skb = skb_addr;
 
-	dump->meta.data = skb->data;
-	dump->meta.len = skb->len;
-	dump->meta.protocol = skb->protocol;
-	dump->meta.pkt_type = (__u16)skb->pkt_type;
 	dump->meta.l2 = 1;
-	dump->meta.mark = skb->mark;
+	dump->meta.len = skb->len;
 	dump->meta.ifindex = skb->ifindex;
-	dump->meta.cb[0] = skb->cb[0];
-	dump->meta.cb[1] = skb->cb[1];
-	dump->meta.cb[2] = skb->cb[2];
-	dump->meta.cb[3] = skb->cb[3];
-	dump->meta.cb[4] = skb->cb[4];
 
 	bpf_skb_pull_data(skb, skb->len);
-	__u64 dumplen = dump->meta.len > MAX_DATA_SIZE ? MAX_DATA_SIZE : dump->meta.len;
-	bpf_perf_event_output(skb, &perf_output, BPF_F_CURRENT_CPU | (dumplen<<32),
-			      dump, sizeof(dump->meta));
+	__u64 payload_len = dump->meta.len > MAX_PAYLOAD_SIZE ? MAX_PAYLOAD_SIZE : dump->meta.len;
+
+	struct btf_ptr p = {};
+	p.type_id = bpf_core_type_id_kernel(struct __sk_buff);
+	p.ptr = skb;
+	bpf_snprintf_btf((char *)&dump->meta.structure, MAX_STRUCT_SIZE, &p,
+			 sizeof(p), BTF_F_COMPACT | BTF_F_PTR_RAW);
+
+	bpf_perf_event_output(skb, &perf_output, BPF_F_CURRENT_CPU | (payload_len<<32),
+			      dump, offsetof(struct skbdump, payload));
 }
 
 SEC("tc")
@@ -201,24 +196,22 @@ collect_skb(struct sk_buff *skb, struct pt_regs *ctx, struct skbdump *dump)
 	dump->meta.time_ns = bpf_ktime_get_boot_ns();
 	dump->meta.skb = (__u64)skb;
 
-	dump->meta.data = (__u64)BPF_CORE_READ(skb, data);
 	dump->meta.l2 = BPF_CORE_READ(skb, mac_len) ? 1 : 0;
 	__u16 off_l2_or_l3 = dump->meta.l2 ? BPF_CORE_READ(skb, mac_header) : BPF_CORE_READ(skb, network_header);
 	dump->meta.len = BPF_CORE_READ(skb, tail) - (__u32)off_l2_or_l3;
-	dump->meta.pkt_type = (__u16)BPF_CORE_READ_BITFIELD_PROBED(skb, pkt_type);
-	BPF_CORE_READ_INTO(&dump->meta.protocol, skb, protocol);
-	BPF_CORE_READ_INTO(&dump->meta.mark, skb, mark);
 	BPF_CORE_READ_INTO(&dump->meta.ifindex, skb, dev, ifindex);
-	BPF_CORE_READ_INTO(&dump->meta.cb[0], skb, cb[0]);
-	BPF_CORE_READ_INTO(&dump->meta.cb[1], skb, cb[8]);
-	BPF_CORE_READ_INTO(&dump->meta.cb[2], skb, cb[16]);
-	BPF_CORE_READ_INTO(&dump->meta.cb[3], skb, cb[24]);
-	BPF_CORE_READ_INTO(&dump->meta.cb[4], skb, cb[32]);
+
+	struct btf_ptr p = {};
+	p.type_id = bpf_core_type_id_kernel(struct sk_buff);
+	p.ptr = skb;
+	bpf_snprintf_btf((char *)&dump->meta.structure, MAX_STRUCT_SIZE, &p,
+			 sizeof(p), BTF_F_COMPACT | BTF_F_PTR_RAW);
 
 	void *skb_head = BPF_CORE_READ(skb, head);
-	__u64 dumplen = dump->meta.len > MAX_DATA_SIZE ? MAX_DATA_SIZE : dump->meta.len;
-	bpf_probe_read_kernel(&dump->payload, dumplen, (void *)(skb_head + off_l2_or_l3));
-	bpf_perf_event_output(ctx, &perf_output, BPF_F_CURRENT_CPU, dump, sizeof(dump->meta) + dumplen);
+	__u64 payload_len = dump->meta.len > MAX_PAYLOAD_SIZE ? MAX_PAYLOAD_SIZE : dump->meta.len;
+	bpf_probe_read_kernel(&dump->payload, payload_len, (void *)(skb_head + off_l2_or_l3));
+
+	bpf_perf_event_output(ctx, &perf_output, BPF_F_CURRENT_CPU, dump, offsetof(struct skbdump, payload) + payload_len);
 	return 0;
 }
 

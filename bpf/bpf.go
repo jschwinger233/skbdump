@@ -20,6 +20,28 @@ import (
 
 type Skbdump = BpfSkbdump
 
+func (d *Skbdump) FindField(f string) string {
+	idx := bytes.Index(d.Meta.Structure[:], []byte(fmt.Sprintf(".%s = ", f)))
+	if idx == -1 {
+		return ""
+	}
+	nested := false
+	for i := idx + len(f) + 4; i < len(d.Meta.Structure); i++ {
+		if d.Meta.Structure[i] == ',' && !nested {
+			return string(d.Meta.Structure[idx+len(f)+4 : i])
+		}
+		switch d.Meta.Structure[i] {
+		case '{', '[', '(':
+			nested = true
+		case '}', ']', ')':
+			if nested {
+				nested = false
+			}
+		}
+	}
+	return ""
+}
+
 type LoadOptions struct {
 	Filter    string
 	BpfConfig BpfConfig
@@ -206,7 +228,7 @@ func (o *Bpf) PollSkb(ctx context.Context) (_ <-chan Skbdump, err error) {
 				log.Printf("Failed to read event: %+v", err)
 				continue
 			}
-			copy(skb.Payload[:], rec.RawSample[unsafe.Sizeof(skb.Meta):])
+			copy(skb.Payload[:], rec.RawSample[unsafe.Offsetof(skb.Payload):])
 
 			ch <- skb
 		}

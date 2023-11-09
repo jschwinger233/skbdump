@@ -14,18 +14,16 @@ import (
 
 type BpfSkbdump struct {
 	Meta struct {
-		At       uint64
-		Skb      uint64
-		TimeNs   uint64
-		Retval   uint64
-		Data     uint64
-		Len      uint32
-		Protocol uint32
-		PktType  uint16
-		L2       uint16
-		Mark     uint32
-		Ifindex  uint32
-		Cb       [5]uint32
+		At        uint64
+		Skb       uint64
+		TimeNs    uint64
+		Retval    uint64
+		L2        uint16
+		_         [2]byte
+		Len       uint32
+		Ifindex   uint32
+		Structure [4096]uint8
+		_         [4]byte
 	}
 	Payload [1500]uint8
 	_       [4]byte

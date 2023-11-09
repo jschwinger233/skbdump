@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"strconv"
 	"strings"
 
 	"github.com/google/gopacket"
@@ -52,7 +53,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 		fmt.Printf("%s%d(%s) ", at, skb.Meta.Ifindex, ifname)
 	}
 
-	fmt.Printf("mark=%x cb=%x ", skb.Meta.Mark, skb.Meta.Cb)
+	fmt.Printf("mark=%s cb=%s ", skb.FindField("mark"), skb.FindField("cb"))
 
 	payload := []byte{}
 	if skb.Meta.L2 == 0 {
@@ -60,7 +61,15 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 			payload = append(payload, 0)
 		}
 		ethertype := make([]byte, 2)
-		binary.BigEndian.PutUint16(ethertype, uint16(skb.Meta.Protocol))
+		protocol := skb.FindField("protocol")
+		if strings.HasPrefix(protocol, "(") {
+			protocol = protocol[strings.Index(protocol, ")")+1:]
+		}
+		proto, err := strconv.ParseUint(protocol, 10, 16)
+		if err != nil {
+			proto = 0
+		}
+		binary.BigEndian.PutUint16(ethertype, uint16(proto))
 		payload = append(payload, ethertype[1], ethertype[0])
 	}
 	payloadLen := 1500

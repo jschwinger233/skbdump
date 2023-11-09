@@ -120,9 +120,9 @@ func main() {
 }
 
 /*
-- payload format: TCP(a=1,b=2)
-- default: no meta
-- -v: selected meta
+- -o cb,_nfct
+- cli flags
 - -vv: skb struct output
 - l2/l3 tc
 */
+
