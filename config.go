@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/jschwinger233/skbdump/bpf"
+	"github.com/jschwinger233/skbdump/utils"
 	flag "github.com/spf13/pflag"
-	"github.com/vishvananda/netns"
-	"golang.org/x/sys/unix"
+	"github.com/vishvananda/netlink"
 )
 
 type Config struct {
@@ -19,7 +19,8 @@ type Config struct {
 	PcapFilename  string
 	PcapFilterExp string
 
-	Netns uint32
+	*utils.Netns
+	ifindex2name map[uint32]string
 }
 
 var (
@@ -35,24 +36,34 @@ func mustInitConfig() {
 	flag.StringVarP(&outputFields, "output-fields", "o", "", "output fields of skb, e.g. \"mark,cb\"")
 	flag.StringVarP(&config.SkbFilename, "skb-filename", "s", "skbdump.meta", "output skb filename")
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
+	var netnsSpecifier string
+	flag.StringVarP(&netnsSpecifier, "netns", "n", "", "netns specifier, e.g. \"pid:1234\", \"path:/var/run/netns/foo\"")
 	flag.Parse()
+
+	var err error
+	if config.Netns, err = utils.NewNetns(netnsSpecifier); err != nil {
+		log.Fatalf("failed to parse netns: %+v", err)
+	}
+	if err = config.Netns.Do(func() (err error) {
+		config.ifindex2name = make(map[uint32]string)
+		links, err := netlink.LinkList()
+		if err != nil {
+			return err
+		}
+		for _, link := range links {
+			config.ifindex2name[uint32(link.Attrs().Index)] = link.Attrs().Name
+		}
+		return
+	}); err != nil {
+		log.Fatalf("failed to get links: %+v", err)
+	}
+
 	if outputFields != "" {
 		config.OutputFields = strings.Split(outputFields, ",")
 	}
 	config.PcapFilterExp = strings.Join(flag.Args(), " ")
 
-	ns, err := netns.Get()
-	if err != nil {
-		log.Fatalf("Failed to get netns: %+v", err)
-	}
-	var s unix.Stat_t
-	if err = unix.Fstat(int(ns), &s); err != nil {
-		return
-	}
-	config.Netns = uint32(s.Ino)
-
-	bpfObjs, err = bpf.New()
-	if err != nil {
+	if bpfObjs, err = bpf.New(); err != nil {
 		log.Fatalf("%+v", err)
 	}
 }

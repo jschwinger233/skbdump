@@ -24,6 +24,7 @@ Usage of skbdump:
   -i, --interface string       interface to capture (default "lo")
   -a, --kaddrs string          kernel addresses to trace, e.g. "0xffffffffa0272110,0xffffffffa0272118"
   -f, --kfuncs string          kernel functions to trace, e.g. "ip_rcv,icmp_rcv"
+  -n, --netns string           netns specifier, e.g. "pid:1234", "path:/var/run/netns/foo"
   -o, --output-fields string   output fields of skb, e.g. "mark,cb"
   -w, --pcap-filename string   output pcap filename (default "skbdump.pcap")
   -s, --skb-filename string    output skb filename (default "skbdump.meta")

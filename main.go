@@ -40,13 +40,13 @@ func main() {
 	if err = bpfObjs.Load(bpf.LoadOptions{
 		Filter: config.PcapFilterExp,
 		BpfConfig: bpf.BpfConfig{
-			Netns: config.Netns,
+			Netns: config.Netns.Inode,
 		},
 	}); err != nil {
 		return
 	}
 
-	targets, err := target.Parse(config.Iface, config.Kfuncs, config.Kaddrs)
+	targets, err := target.Parse(config.Netns, config.Iface, config.Kfuncs, config.Kaddrs)
 	if err != nil {
 		return
 	}

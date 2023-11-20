@@ -5,6 +5,7 @@ import (
 	"github.com/jschwinger233/skbdump/target/dev"
 	"github.com/jschwinger233/skbdump/target/kaddr"
 	"github.com/jschwinger233/skbdump/target/kfunc"
+	"github.com/jschwinger233/skbdump/utils"
 )
 
 type Target interface {
@@ -12,8 +13,8 @@ type Target interface {
 	Detach() error
 }
 
-func Parse(iface, skbfuncs string, addrs string) (targets []Target, err error) {
-	devs, err := dev.GetDevices(iface)
+func Parse(netns *utils.Netns, iface, skbfuncs string, addrs string) (targets []Target, err error) {
+	devs, err := dev.GetDevices(netns, iface)
 	if err != nil {
 		return
 	}

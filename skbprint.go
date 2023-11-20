@@ -36,10 +36,9 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	idx++
 	fmt.Printf("%d %016x ", idx, skb.Meta.Skb)
 
-	ifname := "unknown"
-	iface, err := net.InterfaceByIndex(int(skb.Meta.Ifindex))
-	if err == nil {
-		ifname = iface.Name
+	ifname, ok := config.ifindex2name[skb.Meta.Ifindex]
+	if !ok {
+		ifname = "unknown"
 	}
 
 	ksym, off := utils.Addr2ksym(skb.Meta.At)
