@@ -42,15 +42,9 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 	}
 
 	at := ksym(skb.Meta.At)
-	if len(at) > 1 {
-		switch at[0] {
-		case '>':
-			fmt.Printf("%s@%d(%s) {", at[1:], skb.Meta.Ifindex, ifname)
-		case '<':
-			fmt.Printf("%s@%d(%s) }=%x ", at[1:], skb.Meta.Ifindex, ifname, skb.Meta.Retval)
-		}
-	} else {
-		fmt.Printf("%s%d(%s) ", at, skb.Meta.Ifindex, ifname)
+	fmt.Printf("%s@%d(%s) ", at, skb.Meta.Ifindex, ifname)
+	if strings.Contains(at, "+r") {
+		fmt.Printf("rv=%x ", skb.Meta.Rax)
 	}
 
 	for _, outputField := range config.OutputFields {
@@ -96,6 +90,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 			fmt.Printf("\n")
 		}
 	}
+	//println(string(skb.Meta.Structure[:]))
 }
 
 func stringifyEthernet(data []byte) string {

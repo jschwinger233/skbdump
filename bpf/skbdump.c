@@ -28,7 +28,7 @@ struct skbmeta {
 	__u64	at;
 	__u64	skb;
 	__u64	time_ns;
-	__u64   retval;
+	__u64   rax;
 
 	__u16	l2;
 	__u32	len;
@@ -192,6 +192,7 @@ collect_skb(struct sk_buff *skb, struct pt_regs *ctx, struct skbdump *dump)
 {
 	dump->meta.time_ns = bpf_ktime_get_boot_ns();
 	dump->meta.skb = (__u64)skb;
+	dump->meta.rax = ctx->ax;
 
 	dump->meta.l2 = BPF_CORE_READ(skb, mac_len) ? 1 : 0;
 	__u16 off_l2_or_l3 = dump->meta.l2 ? BPF_CORE_READ(skb, mac_header) : BPF_CORE_READ(skb, network_header);
@@ -298,7 +299,6 @@ int on_kretprobe(struct pt_regs *ctx)
 		return 0;
 
 	dump->meta.at = (*ip) - 1;
-	dump->meta.retval = ctx->ax;
 	collect_skb(*skb, ctx, dump);
 
 	bpf_map_delete_elem(&sp2ip, &sp);

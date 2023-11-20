@@ -119,8 +119,6 @@ func main() {
 }
 
 /*
-- -o cb,_nfct
-- cli flags
-- -vv: skb struct output
-- l2/l3 tc
+- attach on offset
+- l2/l3 tc, message
 */

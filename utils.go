@@ -24,11 +24,11 @@ func init() {
 		if err != nil {
 			continue
 		}
-		kallsymsByAddr[addr] = fmt.Sprintf(">%s", parts[2])
-		kallsymsByAddr[addr-1] = fmt.Sprintf("<%s", parts[2])
+		kallsymsByAddr[addr] = fmt.Sprintf("%s+0", parts[2])
+		kallsymsByAddr[addr-1] = fmt.Sprintf("%s+r", parts[2])
 	}
-	kallsymsByAddr[0] = "<"
-	kallsymsByAddr[1] = ">"
+	kallsymsByAddr[0] = "out"
+	kallsymsByAddr[1] = "in"
 }
 
 func ksym(addr uint64) string {
