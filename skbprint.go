@@ -11,6 +11,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/jschwinger233/skbdump/bpf"
+	"github.com/jschwinger233/skbdump/utils"
 )
 
 var (
@@ -41,9 +42,12 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 		ifname = iface.Name
 	}
 
-	at := ksym(skb.Meta.At)
-	fmt.Printf("%s@%d(%s) ", at, skb.Meta.Ifindex, ifname)
-	if strings.Contains(at, "+r") {
+	ksym, off := utils.Addr2ksym(skb.Meta.At)
+	if off != 0 {
+		ksym = fmt.Sprintf("%s+%d", ksym, off)
+	}
+	fmt.Printf("%s@%d(%s) ", ksym, skb.Meta.Ifindex, ifname)
+	if strings.Contains(ksym, "+r") {
 		fmt.Printf("rv=%x ", skb.Meta.Rax)
 	}
 
@@ -90,7 +94,6 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 			fmt.Printf("\n")
 		}
 	}
-	//println(string(skb.Meta.Structure[:]))
 }
 
 func stringifyEthernet(data []byte) string {

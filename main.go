@@ -46,7 +46,7 @@ func main() {
 		return
 	}
 
-	targets, err := target.Parse(config.Iface, config.Kfuncs)
+	targets, err := target.Parse(config.Iface, config.Kfuncs, config.Kaddrs)
 	if err != nil {
 		return
 	}

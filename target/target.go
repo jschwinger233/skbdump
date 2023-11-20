@@ -3,6 +3,7 @@ package target
 import (
 	"github.com/jschwinger233/skbdump/bpf"
 	"github.com/jschwinger233/skbdump/target/dev"
+	"github.com/jschwinger233/skbdump/target/kaddr"
 	"github.com/jschwinger233/skbdump/target/kfunc"
 )
 
@@ -11,7 +12,7 @@ type Target interface {
 	Detach() error
 }
 
-func Parse(iface, skbfuncs string) (targets []Target, err error) {
+func Parse(iface, skbfuncs string, addrs string) (targets []Target, err error) {
 	devs, err := dev.GetDevices(iface)
 	if err != nil {
 		return
@@ -26,6 +27,14 @@ func Parse(iface, skbfuncs string) (targets []Target, err error) {
 	}
 	for _, kfunc := range kfuncs {
 		targets = append(targets, Target(kfunc))
+	}
+
+	kaddrs, err := kaddr.GetKaddrs(addrs)
+	if err != nil {
+		return
+	}
+	for _, kaddr := range kaddrs {
+		targets = append(targets, Target(kaddr))
 	}
 	return
 }

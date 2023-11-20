@@ -275,7 +275,8 @@ int on_kprobe_tid(struct pt_regs *ctx)
 
 		dump->meta.at = ctx->ip - 1;
 		__u64 sp = ctx->sp;
-		bpf_map_update_elem(&sp2ip, &sp, &dump->meta.at, BPF_ANY);
+		if (!bpf_map_lookup_elem(&sp2ip, &sp))
+			bpf_map_update_elem(&sp2ip, &sp, &dump->meta.at, BPF_ANY);
 		collect_skb(*skb, ctx, dump);
 	}
 	return 0;
