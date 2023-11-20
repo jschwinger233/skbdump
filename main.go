@@ -119,6 +119,5 @@ func main() {
 }
 
 /*
-- attach on offset
 - l2/l3 tc, message
 */

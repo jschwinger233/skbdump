@@ -29,10 +29,10 @@ var (
 
 func mustInitConfig() {
 	flag.StringVarP(&config.Iface, "interface", "i", "lo", "interface to capture")
-	flag.StringVarP(&config.Kfuncs, "kfuncs", "f", "", "skb kfuncs to trace, e.g. \"ip_rcv,icmp_rcv\"")
-	flag.StringVarP(&config.Kaddrs, "kaddrs", "a", "", "addresses to trace, e.g. \"0xffffffffa0272110,0xffffffffa0272118\"")
+	flag.StringVarP(&config.Kfuncs, "kfuncs", "f", "", "kernel functions to trace, e.g. \"ip_rcv,icmp_rcv\"")
+	flag.StringVarP(&config.Kaddrs, "kaddrs", "a", "", "kernel addresses to trace, e.g. \"0xffffffffa0272110,0xffffffffa0272118\"")
 	var outputFields string
-	flag.StringVarP(&outputFields, "output-fields", "o", "", "output fields, e.g. mark,cb")
+	flag.StringVarP(&outputFields, "output-fields", "o", "", "output fields of skb, e.g. \"mark,cb\"")
 	flag.StringVarP(&config.SkbFilename, "skb-filename", "s", "skbdump.meta", "output skb filename")
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
 	flag.Parse()
