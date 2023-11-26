@@ -46,7 +46,7 @@ func skbPrint(skb *bpf.Skbdump, linktype layers.LinkType) {
 		ksym = fmt.Sprintf("%s+%d", ksym, off)
 	}
 	fmt.Printf("%s@%d(%s) ", ksym, skb.Meta.Ifindex, ifname)
-	if strings.Contains(ksym, "+r") {
+	if skb.Meta.Ret == 1 {
 		fmt.Printf("rv=%x ", skb.Meta.Rax)
 	}
 

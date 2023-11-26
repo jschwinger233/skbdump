@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"slices"
@@ -36,8 +35,7 @@ func init() {
 		typ, name := parts[1], parts[2]
 		if typ == "t" || typ == "T" {
 			kallsymsByAddr[addr] = Symbol{typ, name, addr}
-			kallsymsByAddr[addr-1] = Symbol{typ, fmt.Sprintf("%s+r", name), addr - 1}
-			kallsyms = append(kallsyms, kallsymsByAddr[addr], kallsymsByAddr[addr-1])
+			kallsyms = append(kallsyms, kallsymsByAddr[addr])
 		}
 	}
 	kallsymsByAddr[0] = Symbol{"t", "out", 0}

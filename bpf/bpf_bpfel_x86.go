@@ -18,7 +18,8 @@ type BpfSkbdump struct {
 		Skb       uint64
 		TimeNs    uint64
 		Rax       uint64
-		L2        uint16
+		L2        uint8
+		Ret       uint8
 		_         [2]byte
 		Len       uint32
 		Ifindex   uint32

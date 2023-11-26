@@ -30,7 +30,8 @@ struct skbmeta {
 	__u64	time_ns;
 	__u64   rax;
 
-	__u16	l2;
+	__u8	l2;
+	__u8	ret;
 	__u32	len;
 	__u32	ifindex;
 
@@ -115,6 +116,7 @@ cont:
 	dump->meta.skb = skb_addr;
 
 	dump->meta.l2 = 1;
+	dump->meta.ret = 0;
 	dump->meta.len = skb->len;
 	dump->meta.ifindex = skb->ifindex;
 
@@ -242,7 +244,8 @@ cont:
 	if (!dump)
 		return 0;
 
-	dump->meta.at = ctx->ip - 1;
+	dump->meta.at = ctx->ip;
+	dump->meta.ret = 0;
 	__u64 sp = ctx->sp;
 	bpf_map_update_elem(&sp2ip, &sp, &dump->meta.at, BPF_ANY);
 	return collect_skb(skb, ctx, dump);
@@ -273,7 +276,8 @@ int on_kprobe_tid(struct pt_regs *ctx)
 		if (!dump)
 			return 0;
 
-		dump->meta.at = ctx->ip - 1;
+		dump->meta.at = ctx->ip;
+		dump->meta.ret = 0;
 		__u64 sp = ctx->sp;
 		if (!bpf_map_lookup_elem(&sp2ip, &sp))
 			bpf_map_update_elem(&sp2ip, &sp, &dump->meta.at, BPF_ANY);
@@ -299,7 +303,8 @@ int on_kretprobe(struct pt_regs *ctx)
 	if (!dump)
 		return 0;
 
-	dump->meta.at = (*ip) - 1;
+	dump->meta.at = *ip;
+	dump->meta.ret = 1;
 	collect_skb(*skb, ctx, dump);
 
 	bpf_map_delete_elem(&sp2ip, &sp);
