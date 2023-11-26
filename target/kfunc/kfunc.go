@@ -17,6 +17,10 @@ type Kfunc struct {
 }
 
 func GetSkbfuncs(kfnames string) (kfuncs []*Kfunc, err error) {
+	kfuncs = append(kfuncs, &Kfunc{
+		Fname:  "kfree_skbmem",
+		kprobe: func(o bpf.Objects) *ebpf.Program { return o.KprobeKfree() },
+	})
 	if kfnames == "" {
 		return
 	}
@@ -35,10 +39,6 @@ func GetSkbfuncs(kfnames string) (kfuncs []*Kfunc, err error) {
 			})
 		}
 	}
-	kfuncs = append(kfuncs, &Kfunc{
-		Fname:  "kfree_skbmem",
-		kprobe: func(o bpf.Objects) *ebpf.Program { return o.KprobeKfree() },
-	})
 	return
 }
 

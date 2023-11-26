@@ -19,6 +19,8 @@ type Config struct {
 	PcapFilename  string
 	PcapFilterExp string
 
+	Oneshot bool
+
 	*utils.Netns
 	ifindex2name map[uint32]string
 }
@@ -36,9 +38,18 @@ func mustInitConfig() {
 	flag.StringVarP(&outputFields, "output-fields", "o", "", "output fields of skb, e.g. \"mark,cb\"")
 	flag.StringVarP(&config.SkbFilename, "skb-filename", "s", "skbdump.meta", "output skb filename")
 	flag.StringVarP(&config.PcapFilename, "pcap-filename", "w", "skbdump.pcap", "output pcap filename")
+	flag.BoolVarP(&config.Oneshot, "oneshot", "", false, "stop after first captured skb terminates")
 	var netnsSpecifier string
 	flag.StringVarP(&netnsSpecifier, "netns", "n", "", "netns specifier, e.g. \"pid:1234\", \"path:/var/run/netns/foo\"")
 	flag.Parse()
+
+	if config.Oneshot {
+		if config.Kfuncs == "" {
+			config.Kfuncs = "kfree_skbmem"
+		} else {
+			config.Kfuncs += ",kfree_skbmem"
+		}
+	}
 
 	var err error
 	if config.Netns, err = utils.NewNetns(netnsSpecifier); err != nil {

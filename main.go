@@ -16,6 +16,7 @@ import (
 	"github.com/google/gopacket/pcapgo"
 	"github.com/jschwinger233/skbdump/bpf"
 	"github.com/jschwinger233/skbdump/target"
+	"github.com/jschwinger233/skbdump/utils"
 	"github.com/pkg/errors"
 )
 
@@ -34,7 +35,9 @@ func main() {
 		}
 	}()
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	if err = bpfObjs.Load(bpf.LoadOptions{
@@ -88,11 +91,11 @@ func main() {
 	}
 	bootTime := host.Info().BootTime
 
-	println("start tracing")
 	skbChan, err := bpfObjs.PollSkb(ctx)
 	if err != nil {
 		return
 	}
+	println("start tracing")
 	for skb := range skbChan {
 		jb, e := json.Marshal(skb.Meta)
 		if e != nil {
@@ -115,6 +118,14 @@ func main() {
 			return
 		}
 
+		if config.Oneshot {
+			if ksym, _ := utils.Addr2ksym(skb.Meta.At); ksym == "kfree_skbmem" {
+				go func() {
+					time.Sleep(1 * time.Second)
+					cancel()
+				}()
+			}
+		}
 	}
 }
 
