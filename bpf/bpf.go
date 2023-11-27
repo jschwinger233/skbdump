@@ -59,8 +59,8 @@ type BpfConfig struct {
 
 type Objects interface {
 	Load(LoadOptions) error
-	TcIngress() *ebpf.Program
-	TcEgress() *ebpf.Program
+	TcIngress(l2 bool) *ebpf.Program
+	TcEgress(l2 bool) *ebpf.Program
 	Kprobe(pos int) *ebpf.Program
 	Kretprobe() *ebpf.Program
 	KprobeTid() *ebpf.Program
@@ -89,21 +89,24 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 		return
 	}
 
-	for _, progName := range []string{"on_ingress", "on_egress"} {
-		prog, ok := o.spec.Programs[progName]
-		if !ok {
-			return errors.Errorf("program %s not found", progName)
-		}
-		if prog.Instructions, err = elibpcap.Inject(
-			opts.Filter,
-			prog.Instructions,
-			elibpcap.Options{
-				AtBpf2Bpf:  "tc_pcap_filter",
-				DirectRead: true,
-				L2Skb:      true,
-			},
-		); err != nil {
-			return
+	for _, suffix := range []string{"l2", "l3"} {
+		for _, progName := range []string{"on_ingress", "on_egress"} {
+			progName = fmt.Sprintf("%s_%s", progName, suffix)
+			prog, ok := o.spec.Programs[progName]
+			if !ok {
+				return errors.Errorf("program %s not found", progName)
+			}
+			if prog.Instructions, err = elibpcap.Inject(
+				opts.Filter,
+				prog.Instructions,
+				elibpcap.Options{
+					AtBpf2Bpf:  "tc_pcap_filter_" + suffix,
+					DirectRead: true,
+					L2Skb:      true,
+				},
+			); err != nil {
+				return
+			}
 		}
 	}
 	for _, progName := range []string{"on_kprobe1", "on_kprobe2", "on_kprobe3", "on_kprobe4", "on_kprobe5"} {
@@ -165,11 +168,17 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 	return nil
 }
 
-func (o *Bpf) TcIngress() *ebpf.Program {
-	return o.objs.OnIngress
+func (o *Bpf) TcIngress(l2 bool) *ebpf.Program {
+	if l2 {
+		return o.objs.OnIngressL2
+	}
+	return o.objs.OnIngressL3
 }
-func (o *Bpf) TcEgress() *ebpf.Program {
-	return o.objs.OnEgress
+func (o *Bpf) TcEgress(l2 bool) *ebpf.Program {
+	if l2 {
+		return o.objs.OnEgressL2
+	}
+	return o.objs.OnEgressL3
 }
 
 func (o *Bpf) Kprobe(pos int) *ebpf.Program {
