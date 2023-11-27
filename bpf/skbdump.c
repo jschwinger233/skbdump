@@ -86,13 +86,30 @@ struct bpf_map_def SEC("maps") perf_output = {
 };
 
 static __noinline
-bool tc_pcap_filter(void *_skb, void *__skb, void *___skb, void *data, void* data_end)
+bool tc_pcap_filter_l2(void *_skb, void *__skb, void *___skb, void *data, void* data_end)
+{
+	return data != data_end && _skb == __skb && __skb == ___skb;
+}
+
+static __noinline
+bool tc_pcap_filter_l3(void *_skb, void *__skb, void *___skb, void *data, void* data_end)
 {
 	return data != data_end && _skb == __skb && __skb == ___skb;
 }
 
 static __always_inline
-void handle_skb_tc(struct __sk_buff *skb, bool ingress)
+bool tc_pcap_filter(struct __sk_buff *skb, bool l2)
+{
+	if (l2)
+		return tc_pcap_filter_l2((void *)skb, (void *)skb, (void *)skb,
+					 (void *)(long)skb->data, (void *)(long)skb->data_end);
+
+	return tc_pcap_filter_l3((void *)skb, (void *)skb, (void *)skb,
+				 (void *)(long)skb->data, (void *)(long)skb->data_end);
+}
+
+static __always_inline
+void handle_skb_tc(struct __sk_buff *skb, bool ingress, bool l2)
 {
 	struct skbdump *dump;
 
@@ -100,8 +117,7 @@ void handle_skb_tc(struct __sk_buff *skb, bool ingress)
 	if (bpf_map_lookup_elem(&skb_addresses, &skb_addr))
 			goto cont;
 
-	if (!tc_pcap_filter((void *)skb, (void *)skb, (void *)skb,
-			 (void *)(long)skb->data, (void *)(long)skb->data_end))
+	if (!tc_pcap_filter(skb, l2))
 		return;
 
 	bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
@@ -115,7 +131,7 @@ cont:
 	dump->meta.time_ns = bpf_ktime_get_boot_ns();
 	dump->meta.skb = skb_addr;
 
-	dump->meta.l2 = 1;
+	dump->meta.l2 = l2;
 	dump->meta.ret = 0;
 	dump->meta.len = skb->len;
 	dump->meta.ifindex = skb->ifindex;
@@ -124,7 +140,7 @@ cont:
 	__u64 payload_len = dump->meta.len > MAX_PAYLOAD_SIZE ? MAX_PAYLOAD_SIZE : dump->meta.len;
 
 	struct btf_ptr p = {};
-	p.type_id = bpf_core_type_id_kernel(struct __sk_buff);
+	p.type_id = bpf_core_type_id_kernel(struct sk_buff);
 	p.ptr = skb;
 	bpf_snprintf_btf((char *)&dump->meta.structure, MAX_STRUCT_SIZE, &p,
 			 sizeof(p), BTF_F_COMPACT | BTF_F_PTR_RAW);
@@ -134,16 +150,30 @@ cont:
 }
 
 SEC("tc")
-int on_egress(struct __sk_buff *skb)
+int on_egress_l2(struct __sk_buff *skb)
 {
-	handle_skb_tc(skb, false);
+	handle_skb_tc(skb, false, true);
 	return TC_ACT_OK;
 }
 
 SEC("tc")
-int on_ingress(struct __sk_buff *skb)
+int on_ingress_l2(struct __sk_buff *skb)
 {
-	handle_skb_tc(skb, true);
+	handle_skb_tc(skb, true, true);
+	return TC_ACT_OK;
+}
+
+SEC("tc")
+int on_egress_l3(struct __sk_buff *skb)
+{
+	handle_skb_tc(skb, false, false);
+	return TC_ACT_OK;
+}
+
+SEC("tc")
+int on_ingress_l3(struct __sk_buff *skb)
+{
+	handle_skb_tc(skb, true, false);
 	return TC_ACT_OK;
 }
 
@@ -190,7 +220,7 @@ get_netns(struct sk_buff *skb) {
 }
 
 static __always_inline int
-collect_skb(struct sk_buff *skb, struct pt_regs *ctx, struct skbdump *dump)
+kprobe_collect_skb(struct sk_buff *skb, struct pt_regs *ctx, struct skbdump *dump)
 {
 	dump->meta.time_ns = bpf_ktime_get_boot_ns();
 	dump->meta.skb = (__u64)skb;
@@ -248,7 +278,7 @@ cont:
 	dump->meta.ret = 0;
 	__u64 sp = ctx->sp;
 	bpf_map_update_elem(&sp2ip, &sp, &dump->meta.at, BPF_ANY);
-	return collect_skb(skb, ctx, dump);
+	return kprobe_collect_skb(skb, ctx, dump);
 }
 
 
@@ -281,7 +311,7 @@ int on_kprobe_tid(struct pt_regs *ctx)
 		__u64 sp = ctx->sp;
 		if (!bpf_map_lookup_elem(&sp2ip, &sp))
 			bpf_map_update_elem(&sp2ip, &sp, &dump->meta.at, BPF_ANY);
-		collect_skb(*skb, ctx, dump);
+		kprobe_collect_skb(*skb, ctx, dump);
 	}
 	return 0;
 }
@@ -305,7 +335,7 @@ int on_kretprobe(struct pt_regs *ctx)
 
 	dump->meta.at = *ip;
 	dump->meta.ret = 1;
-	collect_skb(*skb, ctx, dump);
+	kprobe_collect_skb(*skb, ctx, dump);
 
 	bpf_map_delete_elem(&sp2ip, &sp);
 

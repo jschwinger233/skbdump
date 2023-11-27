@@ -61,11 +61,11 @@ func (d *Device) Attach(objs bpf.Objects) error {
 		if err = d.EnsureTcQdisc(); err != nil {
 			return
 		}
-		d.delIngress, err = d.AddIngressFilter(objs.TcIngress())
+		d.delIngress, err = d.AddIngressFilter(objs.TcIngress(!d.IsL3Device()))
 		if err != nil {
 			return
 		}
-		d.delEgress, err = d.AddEgressFilter(objs.TcEgress())
+		d.delEgress, err = d.AddEgressFilter(objs.TcEgress(!d.IsL3Device()))
 		return
 	})
 }

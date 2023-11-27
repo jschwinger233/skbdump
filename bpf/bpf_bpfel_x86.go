@@ -71,8 +71,10 @@ type BpfSpecs struct {
 //
 // It can be passed ebpf.CollectionSpec.Assign.
 type BpfProgramSpecs struct {
-	OnEgress            *ebpf.ProgramSpec `ebpf:"on_egress"`
-	OnIngress           *ebpf.ProgramSpec `ebpf:"on_ingress"`
+	OnEgressL2          *ebpf.ProgramSpec `ebpf:"on_egress_l2"`
+	OnEgressL3          *ebpf.ProgramSpec `ebpf:"on_egress_l3"`
+	OnIngressL2         *ebpf.ProgramSpec `ebpf:"on_ingress_l2"`
+	OnIngressL3         *ebpf.ProgramSpec `ebpf:"on_ingress_l3"`
 	OnKprobe1           *ebpf.ProgramSpec `ebpf:"on_kprobe1"`
 	OnKprobe2           *ebpf.ProgramSpec `ebpf:"on_kprobe2"`
 	OnKprobe3           *ebpf.ProgramSpec `ebpf:"on_kprobe3"`
@@ -137,8 +139,10 @@ func (m *BpfMaps) Close() error {
 //
 // It can be passed to LoadBpfObjects or ebpf.CollectionSpec.LoadAndAssign.
 type BpfPrograms struct {
-	OnEgress            *ebpf.Program `ebpf:"on_egress"`
-	OnIngress           *ebpf.Program `ebpf:"on_ingress"`
+	OnEgressL2          *ebpf.Program `ebpf:"on_egress_l2"`
+	OnEgressL3          *ebpf.Program `ebpf:"on_egress_l3"`
+	OnIngressL2         *ebpf.Program `ebpf:"on_ingress_l2"`
+	OnIngressL3         *ebpf.Program `ebpf:"on_ingress_l3"`
 	OnKprobe1           *ebpf.Program `ebpf:"on_kprobe1"`
 	OnKprobe2           *ebpf.Program `ebpf:"on_kprobe2"`
 	OnKprobe3           *ebpf.Program `ebpf:"on_kprobe3"`
@@ -151,8 +155,10 @@ type BpfPrograms struct {
 
 func (p *BpfPrograms) Close() error {
 	return _BpfClose(
-		p.OnEgress,
-		p.OnIngress,
+		p.OnEgressL2,
+		p.OnEgressL3,
+		p.OnIngressL2,
+		p.OnIngressL3,
 		p.OnKprobe1,
 		p.OnKprobe2,
 		p.OnKprobe3,
