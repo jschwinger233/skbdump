@@ -120,10 +120,7 @@ func main() {
 
 		if config.Oneshot {
 			if ksym, _ := utils.Addr2ksym(skb.Meta.At); ksym == "kfree_skbmem" {
-				go func() {
-					time.Sleep(1 * time.Second)
-					cancel()
-				}()
+				cancel()
 			}
 		}
 	}
