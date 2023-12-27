@@ -251,6 +251,8 @@ handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx)
 {
 	__u32 tid;
 	__u64 skb_addr = (__u64)skb;
+	__u32 netns_inode = get_netns(skb);
+
 	if (bpf_map_lookup_elem(&skb_addresses, &skb_addr))
 		goto cont;
 
@@ -260,7 +262,7 @@ handle_skb_kprobe(struct sk_buff *skb, struct pt_regs *ctx)
 	bpf_map_update_elem(&skb_addresses, &skb_addr, &TRUE, BPF_ANY);
 
 cont:
-	if (SKBDUMP_CONFIG.netns != get_netns(skb))
+	if (netns_inode != SKBDUMP_CONFIG.netns && netns_inode != 0)
 		return 0;
 
 	tid = bpf_get_current_pid_tgid() & 0xffffffff;
