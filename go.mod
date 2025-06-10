@@ -7,7 +7,7 @@ require (
 	github.com/elastic/go-sysinfo v1.9.0
 	github.com/florianl/go-tc v0.4.2
 	github.com/google/gopacket v1.1.19
-	github.com/jschwinger233/elibpcap v0.0.0-20231010035657-e99300096f5e
+	github.com/jschwinger233/elibpcap v1.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/vishvananda/netlink v1.1.0
