@@ -100,9 +100,9 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 				opts.Filter,
 				prog.Instructions,
 				elibpcap.Options{
-					AtBpf2Bpf:  "tc_pcap_filter_" + suffix,
-					DirectRead: true,
-					L2Skb:      true,
+					AtBpf2Bpf:        "tc_pcap_filter_" + suffix,
+					PacketAccessMode: elibpcap.BpfProbeReadKernel,
+					L2Skb:            true,
 				},
 			); err != nil {
 				return
@@ -118,9 +118,9 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 			opts.Filter,
 			prog.Instructions,
 			elibpcap.Options{
-				AtBpf2Bpf:  "kprobe_pcap_filter_l2",
-				DirectRead: false,
-				L2Skb:      true,
+				AtBpf2Bpf:        "kprobe_pcap_filter_l2",
+				PacketAccessMode: elibpcap.BpfProbeReadKernel,
+				L2Skb:            true,
 			},
 		); err != nil {
 			return
@@ -129,9 +129,9 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 			opts.Filter,
 			prog.Instructions,
 			elibpcap.Options{
-				AtBpf2Bpf:  "kprobe_pcap_filter_l3",
-				DirectRead: false,
-				L2Skb:      false,
+				AtBpf2Bpf:        "kprobe_pcap_filter_l3",
+				PacketAccessMode: elibpcap.BpfProbeReadKernel,
+				L2Skb:            false,
 			},
 		); err != nil {
 			if !strings.Contains(fmt.Sprintf("%+v", err), "expression rejects all packets") {
@@ -141,9 +141,9 @@ func (o *Bpf) Load(opts LoadOptions) (err error) {
 				"__reject_all__",
 				prog.Instructions,
 				elibpcap.Options{
-					AtBpf2Bpf:  "kprobe_pcap_filter_l3",
-					DirectRead: false,
-					L2Skb:      false,
+					AtBpf2Bpf:        "kprobe_pcap_filter_l3",
+					PacketAccessMode: elibpcap.BpfProbeReadKernel,
+					L2Skb:            false,
 				},
 			); err != nil {
 				return
