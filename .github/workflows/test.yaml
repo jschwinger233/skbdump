@@ -11,10 +11,10 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe
+      uses: actions/setup-go@v4
       with:
         go-version: 1.21.0
 
@@ -35,7 +35,7 @@ jobs:
         go build
 
     - name: Store executable
-      uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32
+      uses: actions/upload-artifact@v4
       with:
         name: skbdump
         path: skbdump
@@ -47,19 +47,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kernel: [ '5.10-v0.3', '5.15-v0.3', '6.3-main', 'bpf-next-20231030.012704' ]
+        kernel: [ '5.10-20250527.055456', '5.15-20250527.055456', '6.1-20250527.055456', '6.12-20250527.055456' ]
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+      - uses: actions/checkout@v4
 
       - name: Retrieve stored skbdump executable
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: skbdump
           path: skbdump
 
       - name: Provision LVH VMs
-        uses: cilium/little-vm-helper@908ab1ff8a596a03cd5221a1f8602dc44c3f906d # v0.0.12
+        uses: cilium/little-vm-helper@e87948476ca97050b1f149ab2aec379d0de19b84
         with:
           test-name: skbdump-test
           image-version: ${{ matrix.kernel }}
@@ -70,13 +70,13 @@ jobs:
             chmod +x /host/skbdump/skbdump
 
       - name: Test
-        uses: cilium/little-vm-helper@908ab1ff8a596a03cd5221a1f8602dc44c3f906d # v0.0.12
+        uses: cilium/little-vm-helper@e87948476ca97050b1f149ab2aec379d0de19b84
         with:
           provision: 'false'
           cmd: |
             set -ex
 
-            iptables -t nat -I POSTROUTING 1 -d 1.1.1.1/32 -p tcp --dport 80 -o enp0s2 -j SNAT --to 10.0.0.6:23333
+            iptables -t nat -I POSTROUTING 1 -d 1.1.1.1/32 -p tcp --dport 80 -o ens2 -j SNAT --to 10.0.0.6:23333
 
             /host/skbdump/skbdump --oneshot -i any -f nf_hook_slow -o mark 'dst host 1.1.1.1 and tcp[tcpflags] = tcp-syn' 2>&1 1>/tmp/log | (read _; curl --local-port 8888 1.1.1.1 &>/dev/null || true)
 
