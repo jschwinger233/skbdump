@@ -47,7 +47,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        kernel: [ '5.10-v0.3', '5.15-v0.3', '6.3-main', 'bpf-next-20231030.012704' ]
+        kernel: [ '5.10-20250527.055456', '5.15-20250527.055456', '6.1-20250527.055456', '6.12-20250527.055456' ]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -76,7 +76,7 @@ jobs:
           cmd: |
             set -ex
 
-            iptables -t nat -I POSTROUTING 1 -d 1.1.1.1/32 -p tcp --dport 80 -o enp0s2 -j SNAT --to 10.0.0.6:23333
+            iptables -t nat -I POSTROUTING 1 -d 1.1.1.1/32 -p tcp --dport 80 -o ens2 -j SNAT --to 10.0.0.6:23333
 
             /host/skbdump/skbdump --oneshot -i any -f nf_hook_slow -o mark 'dst host 1.1.1.1 and tcp[tcpflags] = tcp-syn' 2>&1 1>/tmp/log | (read _; curl --local-port 8888 1.1.1.1 &>/dev/null || true)
 
